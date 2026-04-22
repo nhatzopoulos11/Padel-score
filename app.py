@@ -1,843 +1,668 @@
-from flask import Flask, jsonify, request, render_template_string
+from flask import Flask, jsonify, request
 from flask_cors import CORS
-import json
-import os
-from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 
-# Game State
+# Game state
 state = {
-    "team_a": "Team A",
-    "team_b": "Team B",
-    "points_a": 0,
-    "points_b": 0,
-    "games_a": 0,
-    "games_b": 0,
-    "sets_a": 0,
-    "sets_b": 0,
-    "sets_history": [],
-    "serving": "a",
-    "match_active": False,
+    "player1": "Player 1",
+    "player2": "Player 2", 
+    "player3": "Player 3",
+    "player4": "Player 4",
+    "blue_points": 0,
+    "red_points": 0,
+    "blue_games": 0,
+    "red_games": 0,
+    "blue_sets": 0,
+    "red_sets": 0,
+    "serving": "blue",
+    "tiebreak": False,
     "match_over": False,
-    "winner": None,
-    "last_updated": None
+    "winner": "",
+    "history": []
 }
 
-history = []
+POINTS = ["0", "15", "30", "40"]
 
-POINTS = [0, 15, 30, 40]
-
-def reset_points():
-    state["points_a"] = 0
-    state["points_b"] = 0
-
-def reset_games():
-    state["games_a"] = 0
-    state["games_b"] = 0
-    reset_points()
-
-def check_game_won():
-    a = state["points_a"]
-    b = state["points_b"]
+def get_display_points():
+    if state["tiebreak"]:
+        return str(state["blue_points"]), str(state["red_points"])
     
-    # Both at 40 (index 3) = deuce
-    if a == 3 and b == 3:
-        return None
-    # Advantage A
-    if a == 4 and b == 3:
-        state["games_a"] += 1
-        state["serving"] = "b" if state["serving"] == "a" else "a"
-        record_sets()
-        reset_points()
-        return "a"
-    # Advantage B
-    if a == 3 and b == 4:
-        state["games_b"] += 1
-        state["serving"] = "b" if state["serving"] == "a" else "a"
-        record_sets()
-        reset_points()
-        return "b"
-    # Normal win
-    if a >= 4:
-        state["games_a"] += 1
-        state["serving"] = "b" if state["serving"] == "a" else "a"
-        record_sets()
-        reset_points()
-        return "a"
-    if b >= 4:
-        state["games_b"] += 1
-        state["serving"] = "b" if state["serving"] == "a" else "a"
-        record_sets()
-        reset_points()
-        return "b"
-    return None
-
-def record_sets():
-    ga = state["games_a"]
-    gb = state["games_b"]
+    bp = state["blue_points"]
+    rp = state["red_points"]
     
-    # Win set at 6 with 2 game lead
-    if ga >= 6 and ga - gb >= 2:
-        state["sets_a"] += 1
-        state["sets_history"].append({"a": ga, "b": gb})
-        reset_games()
-        check_match_won()
-    elif gb >= 6 and gb - ga >= 2:
-        state["sets_b"] += 1
-        state["sets_history"].append({"a": ga, "b": gb})
-        reset_games()
-        check_match_won()
-    # Tiebreak at 6-6
-    elif ga == 7 and gb == 6:
-        state["sets_a"] += 1
-        state["sets_history"].append({"a": ga, "b": gb})
-        reset_games()
-        check_match_won()
-    elif gb == 7 and ga == 6:
-        state["sets_b"] += 1
-        state["sets_history"].append({"a": ga, "b": gb})
-        reset_games()
-        check_match_won()
+    if bp >= 3 and rp >= 3:
+        if bp == rp:
+            return "40", "40"
+        elif bp > rp:
+            return "AD", "40"
+        else:
+            return "40", "AD"
+    
+    return POINTS[min(bp, 3)], POINTS[min(rp, 3)]
 
-def check_match_won():
-    if state["sets_a"] >= 2:
-        state["match_over"] = True
-        state["match_active"] = False
-        state["winner"] = state["team_a"]
-    elif state["sets_b"] >= 2:
-        state["match_over"] = True
-        state["match_active"] = False
-        state["winner"] = state["team_b"]
+def save_history():
+    import copy
+    history_entry = {k: v for k, v in state.items() if k != "history"}
+    state["history"].append(copy.deepcopy(history_entry))
+    if len(state["history"]) > 50:
+        state["history"].pop(0)
 
-def get_point_label(p):
-    labels = {0: "0", 1: "15", 2: "30", 3: "40", 4: "ADV"}
-    return labels.get(p, "0")
-
-@app.route("/")
+@app.route('/')
 def index():
-    return render_template_string(MAIN_HTML)
+    return MAIN_HTML
 
-@app.route("/api/score")
+@app.route('/api/score')
 def get_score():
+    bp, rp = get_display_points()
     return jsonify({
-        "team_a": state["team_a"],
-        "team_b": state["team_b"],
-        "points_a": get_point_label(state["points_a"]),
-        "points_b": get_point_label(state["points_b"]),
-        "games_a": state["games_a"],
-        "games_b": state["games_b"],
-        "sets_a": state["sets_a"],
-        "sets_b": state["sets_b"],
-        "sets_history": state["sets_history"],
+        "player1": state["player1"],
+        "player2": state["player2"],
+        "player3": state["player3"],
+        "player4": state["player4"],
+        "blue_points": bp,
+        "red_points": rp,
+        "blue_games": state["blue_games"],
+        "red_games": state["red_games"],
+        "blue_sets": state["blue_sets"],
+        "red_sets": state["red_sets"],
         "serving": state["serving"],
-        "match_active": state["match_active"],
+        "tiebreak": state["tiebreak"],
         "match_over": state["match_over"],
-        "winner": state["winner"],
-        "last_updated": state["last_updated"]
+        "winner": state["winner"]
     })
 
-@app.route("/api/point/<team>", methods=["POST"])
-def add_point(team):
-    if not state["match_active"]:
-        return jsonify({"error": "Match not active"}), 400
+@app.route('/api/point', methods=['POST'])
+def add_point():
+    team = request.json.get('team')
+    if state["match_over"]:
+        return jsonify({"status": "match over"})
     
-    # Save history for undo
-    history.append(json.dumps(state.copy()))
+    save_history()
     
-    if team == "a":
-        state["points_a"] += 1
-        # Handle deuce
-        if state["points_a"] == 3 and state["points_b"] == 4:
-            state["points_b"] = 3
-        check_game_won()
-    elif team == "b":
-        state["points_b"] += 1
-        if state["points_b"] == 3 and state["points_a"] == 4:
-            state["points_a"] = 3
-        check_game_won()
+    if state["tiebreak"]:
+        if team == "blue":
+            state["blue_points"] += 1
+        else:
+            state["red_points"] += 1
+        
+        # Change serve every 2 points in tiebreak
+        total = state["blue_points"] + state["red_points"]
+        if total % 2 == 1:
+            state["serving"] = "red" if state["serving"] == "blue" else "blue"
+        
+        # Win tiebreak at 7+ with 2 point lead
+        if state["blue_points"] >= 7 and state["blue_points"] - state["red_points"] >= 2:
+            state["blue_games"] += 1
+            check_set_win("blue")
+        elif state["red_points"] >= 7 and state["red_points"] - state["blue_points"] >= 2:
+            state["red_games"] += 1
+            check_set_win("red")
+    else:
+        if team == "blue":
+            state["blue_points"] += 1
+        else:
+            state["red_points"] += 1
+        
+        bp = state["blue_points"]
+        rp = state["red_points"]
+        
+        # Check game win
+        if bp >= 4 and bp - rp >= 2:
+            state["blue_games"] += 1
+            state["blue_points"] = 0
+            state["red_points"] = 0
+            state["serving"] = "red" if state["serving"] == "blue" else "blue"
+            check_set_win("blue")
+        elif rp >= 4 and rp - bp >= 2:
+            state["red_games"] += 1
+            state["blue_points"] = 0
+            state["red_points"] = 0
+            state["serving"] = "red" if state["serving"] == "blue" else "blue"
+            check_set_win("red")
     
-    state["last_updated"] = datetime.now().isoformat()
-    return jsonify({"success": True})
+    return jsonify({"status": "ok"})
 
-@app.route("/api/undo", methods=["POST"])
+def check_set_win(team):
+    bg = state["blue_games"]
+    rg = state["red_games"]
+    
+    # Check for tiebreak at 6-6
+    if bg == 6 and rg == 6 and not state["tiebreak"]:
+        state["tiebreak"] = True
+        state["blue_points"] = 0
+        state["red_points"] = 0
+        return
+    
+    # Win set at 6+ with 2 game lead, or 7-5
+    if team == "blue":
+        if (bg >= 6 and bg - rg >= 2) or bg == 7:
+            state["blue_sets"] += 1
+            state["blue_games"] = 0
+            state["red_games"] = 0
+            state["blue_points"] = 0
+            state["red_points"] = 0
+            state["tiebreak"] = False
+            check_match_win("blue")
+    else:
+        if (rg >= 6 and rg - bg >= 2) or rg == 7:
+            state["red_sets"] += 1
+            state["blue_games"] = 0
+            state["red_games"] = 0
+            state["blue_points"] = 0
+            state["red_points"] = 0
+            state["tiebreak"] = False
+            check_match_win("red")
+
+def check_match_win(team):
+    if state["blue_sets"] >= 2:
+        state["match_over"] = True
+        state["winner"] = "blue"
+    elif state["red_sets"] >= 2:
+        state["match_over"] = True
+        state["winner"] = "red"
+
+@app.route('/api/undo', methods=['POST'])
 def undo():
-    if not history:
-        return jsonify({"error": "Nothing to undo"}), 400
-    last = json.loads(history.pop())
-    state.update(last)
-    return jsonify({"success": True})
+    if len(state["history"]) == 0:
+        return jsonify({"status": "nothing to undo"})
+    
+    last = state["history"].pop()
+    for key in last:
+        state[key] = last[key]
+    
+    return jsonify({"status": "ok"})
 
-@app.route("/api/start", methods=["POST"])
+@app.route('/api/start', methods=['POST'])
 def start_match():
-    data = request.json or {}
-    global history
-    history = []
-    
-    state["team_a"] = data.get("team_a", "Team A")
-    state["team_b"] = data.get("team_b", "Team B")
-    state["points_a"] = 0
-    state["points_b"] = 0
-    state["games_a"] = 0
-    state["games_b"] = 0
-    state["sets_a"] = 0
-    state["sets_b"] = 0
-    state["sets_history"] = []
-    state["serving"] = data.get("serving", "a")
-    state["match_active"] = True
+    data = request.json
+    state["player1"] = data.get("player1", "Player 1")
+    state["player2"] = data.get("player2", "Player 2")
+    state["player3"] = data.get("player3", "Player 3")
+    state["player4"] = data.get("player4", "Player 4")
+    state["blue_points"] = 0
+    state["red_points"] = 0
+    state["blue_games"] = 0
+    state["red_games"] = 0
+    state["blue_sets"] = 0
+    state["red_sets"] = 0
+    state["serving"] = "blue"
+    state["tiebreak"] = False
     state["match_over"] = False
-    state["winner"] = None
-    state["last_updated"] = datetime.now().isoformat()
-    
-    return jsonify({"success": True})
+    state["winner"] = ""
+    state["history"] = []
+    return jsonify({"status": "ok"})
 
-@app.route("/api/reset", methods=["POST"])
-def reset_match():
-    global history
-    history = []
-    state["match_active"] = False
-    state["match_over"] = False
-    state["winner"] = None
-    state["points_a"] = 0
-    state["points_b"] = 0
-    state["games_a"] = 0
-    state["games_b"] = 0
-    state["sets_a"] = 0
-    state["sets_b"] = 0
-    state["sets_history"] = []
-    state["last_updated"] = datetime.now().isoformat()
-    return jsonify({"success": True})
-
-MAIN_HTML = """<!DOCTYPE html>
+MAIN_HTML = '''
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Padel Score</title>
-<style>
-  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  
-  body {
-    font-family: 'Arial', sans-serif;
-    background: #0a0a0a;
-    color: white;
-    height: 100dvh;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-  }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Padel Score</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: #111;
+        }
 
-  /* SETUP SCREEN */
-  #setup-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100dvh;
-    padding: 20px;
-    gap: 16px;
-    background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
-  }
+        /* SETUP SCREEN */
+        #setup-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background: #111;
+            padding: 30px;
+            gap: 20px;
+        }
 
-  #setup-screen h1 {
-    font-size: 2rem;
-    color: #4ade80;
-    margin-bottom: 10px;
-  }
+        #setup-screen h1 {
+            color: white;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
 
-  #setup-screen input {
-    width: 100%;
-    max-width: 300px;
-    padding: 14px;
-    font-size: 1.1rem;
-    border-radius: 12px;
-    border: 2px solid #333;
-    background: #1a1a1a;
-    color: white;
-    text-align: center;
-  }
+        .setup-teams {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
 
-  #setup-screen input:focus {
-    outline: none;
-    border-color: #4ade80;
-  }
+        .setup-team {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
 
-  .serve-select {
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    max-width: 300px;
-  }
+        .setup-team h2 {
+            text-align: center;
+            font-size: 18px;
+            padding: 8px;
+            border-radius: 8px;
+        }
 
-  .serve-btn {
-    flex: 1;
-    padding: 14px;
-    border-radius: 12px;
-    border: 2px solid #333;
-    background: #1a1a1a;
-    color: #888;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
+        .blue-title { background: #1a6bb5; color: white; }
+        .red-title { background: #b51a1a; color: white; }
 
-  .serve-btn.active {
-    border-color: #4ade80;
-    color: #4ade80;
-    background: #0d2818;
-  }
+        .setup-team input {
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            background: #222;
+            color: white;
+            font-size: 16px;
+            text-align: center;
+        }
 
-  .start-btn {
-    width: 100%;
-    max-width: 300px;
-    padding: 16px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    border-radius: 12px;
-    border: none;
-    background: #4ade80;
-    color: #000;
-    cursor: pointer;
-    margin-top: 10px;
-  }
+        .setup-team input:focus {
+            outline: none;
+            border-color: #888;
+        }
 
-  .label {
-    color: #888;
-    font-size: 0.9rem;
-    align-self: flex-start;
-    margin-left: calc(50% - 150px);
-  }
+        #start-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 16px 60px;
+            font-size: 22px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
 
-  /* GAME SCREEN */
-  #game-screen {
-    display: none;
-    flex-direction: row;
-    height: 100dvh;
-    width: 100vw;
-  }
+        /* GAME SCREEN */
+        #game-screen {
+            display: none;
+            height: 100vh;
+            flex-direction: column;
+        }
 
-  .team-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 12px;
-    position: relative;
-    cursor: pointer;
-    user-select: none;
-    transition: background 0.15s;
-  }
+        /* TOP: Names */
+        #names-row {
+            display: flex;
+            height: 15vh;
+        }
 
-  .team-panel:active {
-    background: rgba(255,255,255,0.05);
-  }
+        .blue-names {
+            flex: 1;
+            background: #1a6bb5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
 
-  .team-panel.my-team {
-    background: linear-gradient(180deg, #0d1f12 0%, #0a0a0a 100%);
-    border-right: 1px solid #1a1a1a;
-  }
+        .red-names {
+            flex: 1;
+            background: #b51a1a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
 
-  .team-panel.enemy-team {
-    background: linear-gradient(180deg, #1a0d0d 0%, #0a0a0a 100%);
-  }
+        .player-name {
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
 
-  .divider {
-    width: 2px;
-    background: #222;
-    flex-shrink: 0;
-  }
+        /* MIDDLE: Tap zones */
+        #tap-row {
+            display: flex;
+            height: 45vh;
+        }
 
-  .team-name {
-    font-size: 1rem;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    opacity: 0.7;
-  }
+        .blue-tap {
+            flex: 1;
+            background: #1565c0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.1s;
+        }
 
-  .my-team .team-name { color: #4ade80; }
-  .enemy-team .team-name { color: #f87171; }
+        .blue-tap:active { background: #0d47a1; }
 
-  .serving-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #fbbf24;
-    margin-top: 4px;
-    opacity: 0;
-    transition: opacity 0.3s;
-  }
+        .red-tap {
+            flex: 1;
+            background: #c62828;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.1s;
+        }
 
-  .serving-dot.visible { opacity: 1; }
+        .red-tap:active { background: #b71c1c; }
 
-  .score-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
+        .tap-text {
+            color: white;
+            font-size: 22px;
+            font-weight: bold;
+            text-align: center;
+            pointer-events: none;
+            opacity: 0.8;
+        }
 
-  .sets-display {
-    font-size: 1.8rem;
-    font-weight: 900;
-    opacity: 0.9;
-  }
+        /* UNDO BAR */
+        #undo-bar {
+            height: 8vh;
+            background: #f39c12;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
 
-  .my-team .sets-display { color: #4ade80; }
-  .enemy-team .sets-display { color: #f87171; }
+        #undo-bar:active { background: #e67e22; }
 
-  .games-display {
-    font-size: 3.5rem;
-    font-weight: 900;
-    line-height: 1;
-  }
+        #undo-bar span {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
 
-  .my-team .games-display { color: #86efac; }
-  .enemy-team .games-display { color: #fca5a5; }
+        /* BOTTOM: Scores */
+        #score-row {
+            display: flex;
+            height: 32vh;
+        }
 
-  .points-display {
-    font-size: 2.2rem;
-    font-weight: bold;
-    opacity: 0.8;
-  }
+        .blue-score {
+            flex: 1;
+            background: #0d47a1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
 
-  .sets-history {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    align-items: center;
-  }
+        .red-score {
+            flex: 1;
+            background: #b71c1c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
 
-  .set-chip {
-    font-size: 0.75rem;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: #222;
-    color: #888;
-  }
+        .score-sets {
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+            letter-spacing: 3px;
+        }
 
-  /* Bottom buttons */
-  .bottom-controls {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
-  }
+        .score-games {
+            color: white;
+            font-size: 52px;
+            font-weight: bold;
+            line-height: 1;
+        }
 
-  .add-point-btn {
-    width: 100%;
-    padding: 18px;
-    font-size: 1.3rem;
-    font-weight: bold;
-    border-radius: 14px;
-    border: none;
-    cursor: pointer;
-    transition: transform 0.1s, opacity 0.1s;
-  }
+        .score-points {
+            color: rgba(255,255,255,0.9);
+            font-size: 28px;
+            font-weight: bold;
+        }
 
-  .add-point-btn:active {
-    transform: scale(0.96);
-    opacity: 0.8;
-  }
+        .serving-dot {
+            width: 14px;
+            height: 14px;
+            background: #f1c40f;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
 
-  .my-team .add-point-btn {
-    background: #4ade80;
-    color: #000;
-  }
+        /* OVERLAY */
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
 
-  .enemy-team .add-point-btn {
-    background: #f87171;
-    color: #000;
-  }
+        #overlay h2 {
+            color: white;
+            font-size: 36px;
+            text-align: center;
+        }
 
-  .undo-btn {
-    width: 100%;
-    padding: 10px;
-    font-size: 0.9rem;
-    border-radius: 10px;
-    border: 1px solid #333;
-    background: transparent;
-    color: #666;
-    cursor: pointer;
-  }
+        #overlay p {
+            color: #ccc;
+            font-size: 22px;
+            text-align: center;
+        }
 
-  .undo-btn:active { opacity: 0.6; }
+        #overlay button {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 16px 50px;
+            font-size: 22px;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
 
-  /* OVERLAY */
-  #overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw;
-    height: 100dvh;
-    background: rgba(0,0,0,0.85);
-    z-index: 100;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 20px;
-  }
-
-  #overlay.show { display: flex; }
-
-  #overlay-emoji { font-size: 4rem; margin-bottom: 16px; }
-  #overlay-title { font-size: 2rem; font-weight: 900; margin-bottom: 8px; }
-  #overlay-sub { font-size: 1.1rem; color: #888; margin-bottom: 24px; }
-
-  #overlay-close {
-    padding: 14px 32px;
-    font-size: 1.1rem;
-    border-radius: 12px;
-    border: none;
-    background: #4ade80;
-    color: #000;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  /* MATCH OVER */
-  #match-over-screen {
-    display: none;
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw;
-    height: 100dvh;
-    background: linear-gradient(135deg, #0a0a0a, #1a1a2e);
-    z-index: 200;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 20px;
-    gap: 16px;
-  }
-
-  #match-over-screen.show { display: flex; }
-
-  #winner-name {
-    font-size: 2.5rem;
-    font-weight: 900;
-    color: #4ade80;
-  }
-
-  .new-match-btn {
-    padding: 16px 40px;
-    font-size: 1.2rem;
-    border-radius: 14px;
-    border: none;
-    background: #4ade80;
-    color: #000;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 20px;
-  }
-
-  .connection-bar {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 4px;
-    text-align: center;
-    font-size: 0.7rem;
-    color: #333;
-    background: #050505;
-    z-index: 50;
-  }
-
-  .connection-bar.connected { color: #4ade80; }
-  .connection-bar.disconnected { color: #f87171; }
-</style>
+        .tiebreak-badge {
+            background: #f39c12;
+            color: white;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            position: absolute;
+            top: 15vh;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+    </style>
 </head>
 <body>
 
 <!-- SETUP SCREEN -->
 <div id="setup-screen">
-  <h1>🎾 Padel Score</h1>
-  
-  <span class="label">Your team name</span>
-  <input type="text" id="my-team-input" placeholder="Your Team" maxlength="20">
-  
-  <span class="label">Opponent team name</span>
-  <input type="text" id="enemy-team-input" placeholder="Opponents" maxlength="20">
-
-  <span class="label">Who serves first?</span>
-  <div class="serve-select">
-    <button class="serve-btn active" id="serve-us" onclick="selectServe('us')">We Serve</button>
-    <button class="serve-btn" id="serve-them" onclick="selectServe('them')">They Serve</button>
-  </div>
-
-  <button class="start-btn" onclick="startMatch()">Start Match 🎾</button>
+    <h1>🏓 Padel Score</h1>
+    <div class="setup-teams">
+        <div class="setup-team">
+            <h2 class="blue-title">🔵 Blue Team</h2>
+            <input type="text" id="p1" placeholder="Player 1" />
+            <input type="text" id="p2" placeholder="Player 2" />
+        </div>
+        <div class="setup-team">
+            <h2 class="red-title">🔴 Red Team</h2>
+            <input type="text" id="p3" placeholder="Player 3" />
+            <input type="text" id="p4" placeholder="Player 4" />
+        </div>
+    </div>
+    <button id="start-btn" onclick="startMatch()">▶ Start Match</button>
 </div>
 
 <!-- GAME SCREEN -->
 <div id="game-screen">
-  
-  <!-- MY TEAM (LEFT) -->
-  <div class="team-panel my-team" id="my-panel">
-    <div>
-      <div class="team-name" id="my-name">US</div>
-      <div class="serving-dot" id="my-serve-dot"></div>
+
+    <!-- Names Row -->
+    <div id="names-row">
+        <div class="blue-names">
+            <div class="player-name" id="name1">Player 1</div>
+            <div class="player-name" id="name2">Player 2</div>
+        </div>
+        <div class="red-names">
+            <div class="player-name" id="name3">Player 3</div>
+            <div class="player-name" id="name4">Player 4</div>
+        </div>
     </div>
 
-    <div class="score-section">
-      <div class="sets-display" id="my-sets">0</div>
-      <div class="games-display" id="my-games">0</div>
-      <div class="points-display" id="my-points">0</div>
-      <div class="sets-history" id="my-history"></div>
+    <!-- Tap Row -->
+    <div id="tap-row">
+        <div class="blue-tap" onclick="addPoint('blue')">
+            <div class="tap-text">TAP FOR<br>BLUE POINT</div>
+        </div>
+        <div class="red-tap" onclick="addPoint('red')">
+            <div class="tap-text">TAP FOR<br>RED POINT</div>
+        </div>
     </div>
 
-    <div class="bottom-controls">
-      <button class="add-point-btn" onclick="addPoint('my')">+ POINT</button>
-      <button class="undo-btn" onclick="undoPoint()">↩ Undo</button>
-    </div>
-  </div>
-
-  <div class="divider"></div>
-
-  <!-- ENEMY TEAM (RIGHT) -->
-  <div class="team-panel enemy-team" id="enemy-panel">
-    <div>
-      <div class="team-name" id="enemy-name">THEM</div>
-      <div class="serving-dot" id="enemy-serve-dot"></div>
+    <!-- Undo Bar -->
+    <div id="undo-bar" onclick="undoPoint()">
+        <span>↩ UNDO LAST POINT</span>
     </div>
 
-    <div class="score-section">
-      <div class="sets-display" id="enemy-sets">0</div>
-      <div class="games-display" id="enemy-games">0</div>
-      <div class="points-display" id="enemy-points">0</div>
-      <div class="sets-history" id="enemy-history"></div>
+    <!-- Score Row -->
+    <div id="score-row">
+        <div class="blue-score">
+            <div class="score-sets" id="blue-sets">● ● ●</div>
+            <div class="score-games" id="blue-games">0</div>
+            <div class="score-points" id="blue-points">0</div>
+        </div>
+        <div class="red-score">
+            <div class="score-sets" id="red-sets">● ● ●</div>
+            <div class="score-games" id="red-games">0</div>
+            <div class="score-points" id="red-points">0</div>
+        </div>
     </div>
 
-    <div class="bottom-controls">
-      <button class="add-point-btn" onclick="addPoint('enemy')">+ POINT</button>
-      <button class="undo-btn" onclick="undoPoint()">↩ Undo</button>
-    </div>
-  </div>
+    <!-- Tiebreak badge -->
+    <div class="tiebreak-badge" id="tiebreak-badge" style="display:none">TIEBREAK</div>
 
 </div>
 
-<!-- OVERLAY (Game/Set won) -->
+<!-- OVERLAY -->
 <div id="overlay">
-  <div id="overlay-emoji">🎾</div>
-  <div id="overlay-title">Game!</div>
-  <div id="overlay-sub"></div>
-  <button id="overlay-close" onclick="closeOverlay()">Continue</button>
+    <h2 id="overlay-title">Game!</h2>
+    <p id="overlay-sub"></p>
+    <button onclick="closeOverlay()">Continue ▶</button>
 </div>
-
-<!-- MATCH OVER -->
-<div id="match-over-screen">
-  <div style="font-size:3rem">🏆</div>
-  <div style="font-size:1.2rem; color:#888">Match Winner</div>
-  <div id="winner-name">Team A</div>
-  <div id="final-score" style="color:#888; font-size:1rem"></div>
-  <button class="new-match-btn" onclick="newMatch()">New Match</button>
-</div>
-
-<!-- CONNECTION BAR -->
-<div class="connection-bar" id="conn-bar">connecting...</div>
 
 <script>
-  // Which side am I?
-  // 'a' = I am team A, 'b' = I am team B
-  let myTeam = 'a';
-  let servingFirst = 'a';
-  let polling = null;
-  let lastScore = null;
-  let overlayTimer = null;
+    let matchStarted = false;
+    let lastScore = null;
+    let overlayShowing = false;
 
-  function selectServe(who) {
-    document.getElementById('serve-us').classList.toggle('active', who === 'us');
-    document.getElementById('serve-them').classList.toggle('active', who === 'them');
-    servingFirst = who === 'us' ? 'a' : 'b';
-  }
+    function startMatch() {
+        const p1 = document.getElementById('p1').value || 'Player 1';
+        const p2 = document.getElementById('p2').value || 'Player 2';
+        const p3 = document.getElementById('p3').value || 'Player 3';
+        const p4 = document.getElementById('p4').value || 'Player 4';
 
-  async function startMatch() {
-    const myName = document.getElementById('my-team-input').value.trim() || 'Team A';
-    const enemyName = document.getElementById('enemy-team-input').value.trim() || 'Team B';
-
-    // Determine if we are team_a or team_b
-    // First person to start = team A
-    myTeam = 'a';
-
-    const teamA = myName;
-    const teamB = enemyName;
-
-    try {
-      const res = await fetch('/api/start', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          team_a: teamA,
-          team_b: teamB,
-          serving: servingFirst
-        })
-      });
-
-      if (res.ok) {
-        document.getElementById('setup-screen').style.display = 'none';
-        document.getElementById('game-screen').style.display = 'flex';
-        startPolling();
-      }
-    } catch(e) {
-      alert('Connection error. Check your internet.');
-    }
-  }
-
-  async function addPoint(side) {
-    // side = 'my' or 'enemy'
-    const team = side === 'my' ? myTeam : (myTeam === 'a' ? 'b' : 'a');
-    
-    try {
-      await fetch('/api/point/' + team, { method: 'POST' });
-      await refreshScore();
-    } catch(e) {
-      console.log('Error adding point');
-    }
-  }
-
-  async function undoPoint() {
-    try {
-      await fetch('/api/undo', { method: 'POST' });
-      await refreshScore();
-    } catch(e) {}
-  }
-
-  function startPolling() {
-    refreshScore();
-    polling = setInterval(refreshScore, 2000);
-  }
-
-  async function refreshScore() {
-    try {
-      const res = await fetch('/api/score');
-      const data = await res.json();
-      
-      document.getElementById('conn-bar').textContent = '● live';
-      document.getElementById('conn-bar').className = 'connection-bar connected';
-
-      updateDisplay(data);
-    } catch(e) {
-      document.getElementById('conn-bar').textContent = '● disconnected';
-      document.getElementById('conn-bar').className = 'connection-bar disconnected';
-    }
-  }
-
-  function updateDisplay(data) {
-    const isA = myTeam === 'a';
-
-    const myName = isA ? data.team_a : data.team_b;
-    const enemyName = isA ? data.team_b : data.team_a;
-    const mySets = isA ? data.sets_a : data.sets_b;
-    const enemySets = isA ? data.sets_b : data.sets_a;
-    const myGames = isA ? data.games_a : data.games_b;
-    const enemyGames = isA ? data.games_b : data.games_a;
-    const myPoints = isA ? data.points_a : data.points_b;
-    const enemyPoints = isA ? data.points_b : data.points_a;
-    const imServing = data.serving === (isA ? 'a' : 'b');
-
-    document.getElementById('my-name').textContent = myName;
-    document.getElementById('enemy-name').textContent = enemyName;
-    document.getElementById('my-sets').textContent = mySets;
-    document.getElementById('enemy-sets').textContent = enemySets;
-    document.getElementById('my-games').textContent = myGames;
-    document.getElementById('enemy-games').textContent = enemyGames;
-    document.getElementById('my-points').textContent = myPoints;
-    document.getElementById('enemy-points').textContent = enemyPoints;
-
-    document.getElementById('my-serve-dot').classList.toggle('visible', imServing);
-    document.getElementById('enemy-serve-dot').classList.toggle('visible', !imServing);
-
-    // Sets history
-    updateHistory(data.sets_history, isA);
-
-    // Check match over
-    if (data.match_over && data.winner) {
-      showMatchOver(data);
-      return;
+        fetch('/api/start', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({player1: p1, player2: p2, player3: p3, player4: p4})
+        }).then(() => {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'flex';
+            matchStarted = true;
+            updateScore();
+        });
     }
 
-    // Detect score change for overlays
-    if (lastScore) {
-      const prevMySets = isA ? lastScore.sets_a : lastScore.sets_b;
-      const prevEnemySets = isA ? lastScore.sets_b : lastScore.sets_a;
-
-      if (mySets > prevMySets) {
-        showOverlay('🎉', 'Set Won!', myName + ' wins the set!');
-      } else if (enemySets > prevEnemySets) {
-        showOverlay('😤', 'Set Lost', enemyName + ' wins the set');
-      } else if (myGames > (isA ? lastScore.games_a : lastScore.games_b)) {
-        showOverlay('✅', 'Game!', myName + ' wins the game');
-      } else if (enemyGames > (isA ? lastScore.games_b : lastScore.games_a)) {
-        showOverlay('❌', 'Game Lost', enemyName + ' wins the game');
-      }
+    function addPoint(team) {
+        if (overlayShowing) return;
+        fetch('/api/point', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({team: team})
+        }).then(() => updateScore());
     }
 
-    lastScore = {...data};
-  }
+    function undoPoint() {
+        fetch('/api/undo', {method: 'POST'})
+            .then(() => updateScore());
+    }
 
-  function updateHistory(history, isA) {
-    const myEl = document.getElementById('my-history');
-    const enemyEl = document.getElementById('enemy-history');
-    myEl.innerHTML = '';
-    enemyEl.innerHTML = '';
+    function closeOverlay() {
+        document.getElementById('overlay').style.display = 'none';
+        overlayShowing = false;
+    }
 
-    history.forEach(set => {
-      const myScore = isA ? set.a : set.b;
-      const enemyScore = isA ? set.b : set.a;
-      
-      const myChip = document.createElement('div');
-      myChip.className = 'set-chip';
-      myChip.textContent = myScore;
-      myEl.appendChild(myChip);
+    function setDots(sets) {
+        let dots = '';
+        for (let i = 0; i < 3; i++) {
+            dots += i < sets ? '⬤ ' : '○ ';
+        }
+        return dots.trim();
+    }
 
-      const enemyChip = document.createElement('div');
-      enemyChip.className = 'set-chip';
-      enemyChip.textContent = enemyScore;
-      enemyEl.appendChild(enemyChip);
-    });
-  }
+    function updateScore() {
+        fetch('/api/score').then(r => r.json()).then(data => {
+            // Update names
+            document.getElementById('name1').textContent = data.player1;
+            document.getElementById('name2').textContent = data.player2;
+            document.getElementById('name3').textContent = data.player3;
+            document.getElementById('name4').textContent = data.player4;
 
-  function showOverlay(emoji, title, sub) {
-    if (overlayTimer) clearTimeout(overlayTimer);
-    document.getElementById('overlay-emoji').textContent = emoji;
-    document.getElementById('overlay-title').textContent = title;
-    document.getElementById('overlay-sub').textContent = sub;
-    document.getElementById('overlay').classList.add('show');
-    overlayTimer = setTimeout(closeOverlay, 3000);
-  }
+            // Update scores
+            const blueServe = data.serving === 'blue' ? ' ●' : '';
+            const redServe = data.serving === 'red' ? ' ●' : '';
 
-  function closeOverlay() {
-    document.getElementById('overlay').classList.remove('show');
-    if (overlayTimer) clearTimeout(overlayTimer);
-  }
+            document.getElementById('blue-points').textContent = data.blue_points + blueServe;
+            document.getElementById('red-points').textContent = data.red_points + redServe;
+            document.getElementById('blue-games').textContent = data.blue_games;
+            document.getElementById('red-games').textContent = data.red_games;
+            document.getElementById('blue-sets').textContent = setDots(data.blue_sets);
+            document.getElementById('red-sets').textContent = setDots(data.red_sets);
 
-  function showMatchOver(data) {
-    clearInterval(polling);
-    document.getElementById('winner-name').textContent = data.winner;
-    
-    const history = data.sets_history;
-    let scoreText = history.map(s => s.a + '-' + s.b).join('  ');
-    document.getElementById('final-score').textContent = scoreText;
-    
-    document.getElementById('match-over-screen').classList.add('show');
-  }
+            // Tiebreak badge
+            document.getElementById('tiebreak-badge').style.display = data.tiebreak ? 'block' : 'none';
 
-  function newMatch() {
-    document.getElementById('match-over-screen').classList.remove('show');
-    document.getElementById('game-screen').style.display = 'none';
-    document.getElementById('setup-screen').style.display = 'flex';
-    lastScore = null;
-    if (polling) clearInterval(polling);
-  }
+            // Match over
+            if (data.match_over && !overlayShowing) {
+                overlayShowing = true;
+                const winner = data.winner === 'blue' ? 
+                    (data.player1 + ' & ' + data.player2) : 
+                    (data.player3 + ' & ' + data.player4);
+                const color = data.winner === 'blue' ? '#1a6bb5' : '#b51a1a';
+                document.getElementById('overlay-title').textContent = '🏆 Match Over!';
+                document.getElementById('overlay-title').style.color = color;
+                document.getElementById('overlay-sub').textContent = winner + ' wins!';
+                document.getElementById('overlay').style.display = 'flex';
+            }
+
+            lastScore = data;
+        });
+    }
+
+    // Poll every 2 seconds for sync
+    setInterval(() => {
+        if (matchStarted) updateScore();
+    }, 2000);
 </script>
+
 </body>
 </html>
-"""
+'''
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+if __name__ == '__main__':
+    app.run(debug=True)
