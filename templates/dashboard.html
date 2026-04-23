@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Padel Score Keeper</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px 25px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+        }
+
+        .header h1 {
+            color: #00d4ff;
+            font-size: 22px;
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            margin-top: 3px;
+        }
+
+        .logout-btn {
+            background: rgba(255,50,50,0.2);
+            border: 1px solid rgba(255,50,50,0.4);
+            color: #ff6b6b;
+            padding: 8px 18px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+
+        .logout-btn:hover {
+            background: rgba(255,50,50,0.35);
+        }
+
+        /* Trial Banner */
+        .trial-banner {
+            background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,153,204,0.1));
+            border: 1px solid rgba(0,212,255,0.3);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .trial-banner .trial-text {
+            color: #00d4ff;
+            font-size: 14px;
+        }
+
+        .trial-banner .trial-days {
+            font-size: 22px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .subscribe-btn {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00d4ff;
+        }
+
+        .stat-card .label {
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Courts Section */
+        .section-title {
+            color: rgba(255,255,255,0.8);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+
+        .courts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+
+        .court-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            transition: border-color 0.3s;
+        }
+
+        .court-card:hover {
+            border-color: rgba(0,212,255,0.4);
+        }
+
+        .court-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .court-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .court-status {
+            background: rgba(0,255,100,0.15);
+            border: 1px solid rgba(0,255,100,0.3);
+            color: #00ff64;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+        }
+
+        .court-url {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.5);
+            word-break: break-all;
+            margin-bottom: 12px;
+        }
+
+        .court-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-open {
+            flex: 1;
+            padding: 9px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .btn-qr {
+            padding: 9px 14px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        /* Expired state */
+        .expired-overlay {
+            background: rgba(255,50,50,0.1);
+            border: 1px solid rgba(255,50,50,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .expired-overlay h3 {
+            color: #ff6b6b;
+            margin-bottom: 8px;
+        }
+
+        .expired-overlay p {
+            color: rgba(255,255,255,0.6);
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>🎾 {{ club.club_name }}</h1>
+            <p>Welcome back, {{ club.owner_name }}</p>
+        </div>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+
+    <!-- Trial Banner or Expired Warning -->
+    {% if club.is_trial and club.trial_days_left() > 0 %}
+    <div class="trial-banner">
+        <div>
+            <div class="trial-text">⏱ Free Trial Active</div>
+            <div class="trial-days">{{ club.trial_days_left() }} days left</div>
+        </div>
+        <a href="/subscribe" class="subscribe-btn">Subscribe Now €29/court/month →</a>
+    </div>
+    {% elif not club.is_active %}
+    <div class="expired-overlay">
+        <h3>⚠️ Subscription Required</h3>
+        <p>Your trial has ended. Subscribe to keep your courts active.</p>
+        <a href="/subscribe" class="subscribe-btn">Activate Subscription →</a>
+    </div>
+    {% endif %}
+
+    <!-- Stats -->
+    <div class="stats-row">
+        <div class="stat-card">
+            <div class="number">{{ courts|length }}</div>
+            <div class="label">Total Courts</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">€{{ courts|length * 29 }}</div>
+            <div class="label">Monthly Cost</div>
+        </div>
+        <div class="stat-card">
+            <div class="number">{{ club.trial_days_left() if club.is_trial else '∞' }}</div>
+            <div class="label">Days Remaining</div>
+        </div>
+    </div>
+
+    <!-- Courts -->
+    <div class="section-title">🏟️ Your Courts</div>
+    <div class="courts-grid">
+        {% for court in courts %}
+        <div class="court-card">
+            <div class="court-header">
+                <div class="court-name">{{ court.court_name }}</div>
+                <div class="court-status">● Active</div>
+            </div>
+            <div class="court-url">
+                {{ request.host_url }}court/{{ court.id }}
+            </div>
+            <div class="court-actions">
+                <a href="/court/{{ court.id }}" class="btn-open">Open Scoreboard</a>
+                <a href="/qr/{{ court.id }}" class="btn-qr">📱 QR</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+</body>
+</html>
