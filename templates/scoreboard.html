@@ -1,1 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ court.court_name }} - {{ club.club_name }}</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
+body {
+    background: #0a0e1a;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+}
+
+/* HEADER */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.header-left { font-size: 14px; color: #00d4ff; font-weight: bold; }
+.header-right { font-size: 12px; color: #888; }
+
+/* TIMER */
+.timer-bar {
+    text-align: center;
+    padding: 6px;
+    background: rgba(255,255,255,0.03);
+    font-size: 13px;
+    color: #aaa;
+}
+.timer-bar span { color: #00d4ff; font-weight: bold; font-size: 15px; }
+.timer-warning { color: #ff6b6b !important; }
+
+/* SCOREBOARD */
+.scoreboard {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 6px;
+}
+
+/* PLAYER ROW */
+.player-row {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 200px 1fr auto;
+    gap: 8px;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 10px 16px;
+    border: 2px solid transparent;
+    transition: border-color 0.3s;
+}
+.player-row.serving { border-color: #00d4ff; }
+.player-row.winner-flash { animation: winnerFlash 0.5s ease infinite; }
+
+@keyframes winnerFlash {
+    0%, 100% { background: rgba(255,255,255,0.05); }
+    50% { background: rgba(0,212,255,0.2); }
+}
+
+/* NAMES */
+.player-names { display: flex; flex-direction: column; gap: 2px; }
+.player-name {
+    font-size: 22px;
+    font-weight: bold;
+    color: white;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: background 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+.player-name:hover { background: rgba(255,255,255,0.1); }
+.player-name.editing { background: rgba(0,212,255,0.2); outline: none; border: 1px solid #00d4ff; }
+.serve-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: #00d4ff;
+    display: inline-block;
+    margin-left: 6px;
+    opacity: 0;
+}
+.player-row.serving .serve-dot { opacity: 1; }
+
+/* SCORES */
+.scores {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+.points-display {
+    font-size: 110px;
+    font-weight: 900;
+    line-height: 1;
+    color: white;
+    min-width: 140px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background 0.2s, transform 0.1s;
+    padding: 0 10px;
+}
+.points-display:hover { background: rgba(255,255,255,0.1); transform: scale(1.02); }
+.points-display:active { transform: scale(0.98); }
+.points-display.golden { color: #ffd700; }
+
+.games-display {
+    font-size: 52px;
+    font-weight: 700;
+    color: #00d4ff;
+    min-width: 60px;
+    text-align: center;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 0 8px;
+    transition: background 0.2s;
+}
+.games-display:hover { background: rgba(255,255,255,0.1); }
+
+/* SETS */
+.sets-display {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 80px;
+}
+.set-score {
+    font-size: 28px;
+    font-weight: bold;
+    color: #888;
+    text-align: center;
+}
+.set-score.current-set { color: white; }
+.set-label {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+}
+
+/* DIVIDER */
+.divider {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    margin: 2px 8px;
+}
+
+/* CONTROLS */
+.controls {
+    padding: 10px 16px;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    background: rgba(255,255,255,0.03);
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn:hover { transform: translateY(-1px); opacity: 0.9; }
+.btn:active { transform: translateY(0); }
+
+.btn-undo { background: #2a2a3e; color: #aaa; border: 1px solid #444; }
+.btn-new-game { background: #1a3a2a; color: #00ff88; border: 1px solid #00ff88; }
+.btn-settings { background: #1a1a2e; color: #888; border: 1px solid #333; }
+
+/* STATUS BAR */
+.status-bar {
+    text-align: center;
+    padding: 4px;
+    font-size: 12px;
+    color: #555;
+    background: #070a12;
+}
+.status-bar .golden-point-msg { color: #ffd700; font-weight: bold; font-size: 14px; }
+
+/* MODAL */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+    background: #1a1f35;
+    border-radius: 16px;
+    padding: 30px;
+    min-width: 320px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+.modal h3 { color: #00d4ff; margin-bottom: 20px; text-align: center; font-size: 20px; }
+.modal-btn {
+    width: 100%;
+    padding: 14px;
+    margin: 6px 0;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.modal-btn:hover { opacity: 0.85; transform: scale(1.01); }
+.modal-btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: white; }
+.modal-btn-danger { background: linear-gradient(135deg, #ff4444, #cc0000); color: white; }
+.modal-btn-cancel { background: #2a2a3e; color: #aaa; }
+
+/* WIN OVERLAY */
+.win-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.9);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+}
+.win-overlay.show { display: flex; }
+.win-text { font-size: 48px; font-weight: 900; color: #ffd700; margin-bottom: 10px; }
+.win-subtext { font-size: 24px; color: white; margin-bottom: 30px; }
+.win-score { font-size: 18px; color: #aaa; margin-bottom: 30px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+    <div class="header-left">🎾 {{ club.club_name }} — {{ court.court_name }}</div>
+    <div class="header-right" id="currentTime"></div>
+</div>
+
+<!-- TIMER BAR -->
+<div class="timer-bar">
+    ⏱ Match time: <span id="matchTimer">00:00</span>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    🏟 Court time: <span id="courtTimer">30:00</span>
+</div>
+
+<!-- SCOREBOARD -->
+<div class="scoreboard">
+
+    <!-- TEAM 1 -->
+    <div class="player-row serving" id="row0">
+        <div class="player-names">
+            <div class="player-name" id="name0" contenteditable="false"
+                 onclick="editName(0)" onblur="saveName(0, this)">Player 1</div>
+            <div class="player-name" id="name1" contenteditable="false"
+                 onclick="editName(1)" onblur="saveName(1, this)">Player 2</div>
+            <span class="serve-dot"></span>
+        </div>
+        <div class="scores">
+            <div class="points-display" id="points0" onclick="addPoint(0)">0</div>
+            <div class="games-display" id="games0" onclick="addGame(0)">0</div>
+        </div>
+        <div class="sets-display" id="sets0"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- TEAM 2 -->
+    <div class="player-row" id="row1">
+        <div class="player-names">
+            <div class="player-name" id="name2" contenteditable="false"
+                 onclick="editName(2)" onblur="saveName(2, this)">Player 3</div>
+            <div class="player-name" id="name3" contenteditable="false"
+                 onclick="editName(3)" onblur="saveName(3, this)">Player 4</div>
+            <span class="serve-dot"></span>
+        </div>
+        <div class="scores">
+            <div class="points-display" id="points1" onclick="addPoint(1)">0</div>
+            <div class="games-display" id="games1" onclick="addGame(1)">0</div>
+        </div>
+        <div class="sets-display" id="sets1"></div>
+    </div>
+
+</div>
+
+<!-- STATUS BAR -->
+<div class="status-bar">
+    <span id="statusMsg">Tap score to add point • Tap name to edit • Match in progress</span>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+    <button class="btn btn-undo" onclick="undo()">↩ Undo</button>
+    <button class="btn btn-new-game" onclick="showNewGameModal()">+ New Match</button>
+    <button class="btn btn-settings" onclick="showSettingsModal()">⚙ Settings</button>
+</div>
+
+<!-- NEW GAME MODAL -->
+<div class="modal-overlay" id="newGameModal">
+    <div class="modal">
+        <h3>🎾 Start New Match?</h3>
+        <p style="color:#aaa; text-align:center; margin-bottom:20px; font-size:14px;">
+            This will reset all scores
+        </p>
+        <button class="modal-btn modal-btn-danger" onclick="newGame()">Reset & Start New</button>
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('newGameModal')">Cancel</button>
+    </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <h3>⚙ Settings</h3>
+        <div style="margin-bottom:16px;">
+            <label style="color:#aaa; font-size:13px;">Sets to win match:</label>
+            <select id="setsToWin" style="width:100%; padding:10px; margin-top:6px; background:#2a2a3e; color:white; border:1px solid #444; border-radius:8px; font-size:16px;">
+                <option value="1">1 Set</option>
+                <option value="2" selected>2 Sets (Best of 3)</option>
+                <option value="3">3 Sets (Best of 5)</option>
+            </select>
+        </div>
+        <div style="margin-bottom:16px;">
+            <label style="color:#aaa; font-size:13px;">Golden Point (deuce):</label>
+            <select id="goldenPointSetting" style="width:100%; padding:10px; margin-top:6px; background:#2a2a3e; color:white; border:1px solid #444; border-radius:8px; font-size:16px;">
+                <option value="true" selected>Enabled</option>
+                <option value="false">Disabled (normal deuce)</option>
+            </select>
+        </div>
+        <div style="margin-bottom:20px;">
+            <label style="color:#aaa; font-size:13px;">Court time (minutes):</label>
+            <select id="courtTimeSetting" style="width:100%; padding:10px; margin-top:6px; background:#2a2a3e; color:white; border:1px solid #444; border-radius:8px; font-size:16px;">
+                <option value="30" selected>30 minutes</option>
+                <option value="60">60 minutes</option>
+                <option value="90">90 minutes</option>
+                <option value="120">120 minutes</option>
+            </select>
+        </div>
+        <button class="modal-btn modal-btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button class="modal-btn modal-btn-cancel" onclick="closeModal('settingsModal')">Cancel</button>
+    </div>
+</div>
+
+<!-- WIN OVERLAY -->
+<div class="win-overlay" id="winOverlay">
+    <div class="win-text" id="winText">🏆 Team Wins!</div>
+    <div class="win-subtext" id="winSubtext"></div>
+    <div class="win-score" id="winScore"></div>
+    <button class="modal-btn modal-btn-primary" style="min-width:200px; padding:16px; font-size:18px;" onclick="newGame()">New Match</button>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// GAME STATE
+// ─────────────────────────────────────────
+let state = {
+    points: [0, 0],
+    games: [0, 0],
+    sets: [[], []],
+    serving: 0,
+    goldenPoint: false,
+    matchOver: false
+};
+
+let settings = {
+    setsToWin: 2,
+    goldenPoint: true,
+    courtMinutes: 30
+};
+
+let history = [];
+const MAX_HISTORY = 50;
+
+// Timers
+let matchSeconds = 0;
+let courtSeconds = 0;
+let matchTimerInterval = null;
+let courtTimerInterval = null;
+
+// Player names
+let playerNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+
+// ─────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────
+function init() {
+    loadFromStorage();
+    startTimers();
+    updateDisplay();
+    updateClock();
+    setInterval(updateClock, 1000);
+}
+
+function loadFromStorage() {
+    const key = 'court_{{ court.id }}';
+    const saved = localStorage.getItem(key);
+    if (saved) {
+        try {
+            const data = JSON.parse(saved);
+            state = data.state || state;
+            settings = data.settings || settings;
+            playerNames = data.playerNames || playerNames;
+            matchSeconds = data.matchSeconds || 0;
+            courtSeconds = data.courtSeconds || 0;
+            
+            // Restore settings UI
+            document.getElementById('setsToWin').value = settings.setsToWin;
+            document.getElementById('goldenPointSetting').value = settings.goldenPoint;
+            document.getElementById('courtTimeSetting').value = settings.courtMinutes;
+            
+            // Restore names
+            for (let i = 0; i < 4; i++) {
+                document.getElementById('name' + i).textContent = playerNames[i];
+            }
+        } catch(e) {}
+    }
+}
+
+function saveToStorage() {
+    const key = 'court_{{ court.id }}';
+    localStorage.setItem(key, JSON.stringify({
+        state, settings, playerNames, matchSeconds, courtSeconds
+    }));
+}
+
+// ─────────────────────────────────────────
+// TIMERS
+// ─────────────────────────────────────────
+function startTimers() {
+    if (!state.matchOver) {
+        matchTimerInterval = setInterval(() => {
+            matchSeconds++;
+            updateTimerDisplay();
+            saveToStorage();
+        }, 1000);
+    }
+
+    courtTimerInterval = setInterval(() => {
+        if (courtSeconds > 0) {
+            courtSeconds--;
+        } else {
+            courtSeconds = settings.courtMinutes * 60;
+        }
+        updateTimerDisplay();
+    }, 1000);
+
+    // Init court timer if 0
+    if (courtSeconds === 0) {
+        courtSeconds = settings.courtMinutes * 60;
+    }
+}
+
+function updateTimerDisplay() {
+    document.getElementById('matchTimer').textContent = formatTime(matchSeconds);
+    
+    const courtEl = document.getElementById('courtTimer');
+    courtEl.textContent = formatTime(courtSeconds);
+    
+    if (courtSeconds <= 300) { // 5 min warning
+        courtEl.className = 'timer-warning';
+    } else {
+        courtEl.className = '';
+    }
+}
+
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+function updateClock() {
+    const now = new Date();
+    document.getElementById('currentTime').textContent = 
+        now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+}
+
+// ─────────────────────────────────────────
+// SCORING
+// ─────────────────────────────────────────
+const POINT_LABELS = ['0', '15', '30', '40', 'AD'];
+
+function addPoint(team) {
+    if (state.matchOver) return;
+    
+    saveHistory();
+    
+    const opp = 1 - team;
+    
+    // Golden Point situation (both at 40 = index 3)
+    if (state.points[0] === 3 && state.points[1] === 3) {
+        if (settings.goldenPoint) {
+            // Golden point - whoever wins this wins the game
+            winGame(team);
+            return;
+        } else {
+            // Normal deuce - need AD
+            state.points[team] = 4; // AD
+            updateDisplay();
+            saveToStorage();
+            return;
+        }
+    }
+    
+    // AD situation
+    if (state.points[team] === 4) {
+        // Already AD, win the game
+        winGame(team);
+        return;
+    }
+    
+    if (state.points[opp] === 4) {
+        // Opponent had AD, back to deuce
+        state.points[0] = 3;
+        state.points[1] = 3;
+        updateDisplay();
+        saveToStorage();
+        return;
+    }
+    
+    // Normal point
+    state.points[team]++;
+    
+    // Check if won game (reached beyond 40 = index 3 when opp < 3)
+    if (state.points[team] === 4 && state.points[opp] < 3) {
+        winGame(team);
+        return;
+    }
+    // Actually index 3 is "40", need 4 points (0,1,2,3) to win normally
+    // Win game when point index would be 4 and opponent < 3
+    
+    updateDisplay();
+    saveToStorage();
+}
+
+function winGame(team) {
+    state.points = [0, 0];
+    state.games[team]++;
+    
+    // Switch serve after each game
+    state.serving = 1 - state.serving;
+    
+    // Check set win
+    checkSetWin(team);
+}
+
+function checkSetWin(team) {
+    const opp = 1 - team;
+    const tGames = state.games[team];
+    const oGames = state.games[opp];
+    
+    // Win set: 6 games with 2 ahead, or 7-5, or tiebreak at 7-6
+    const wonSet = (tGames >= 6 && tGames - oGames >= 2) || 
+                   tGames === 7;
+    
+    if (wonSet) {
+        // Save set scores
+        state.sets[0].push(state.games[0]);
+        state.sets[1].push(state.games[1]);
+        state.games = [0, 0];
+        
+        // Check match win
+        const setsWon = state.sets[team].filter((s, i) => s > state.sets[opp][i]).length;
+        
+        if (setsWon >= settings.setsToWin) {
+            state.matchOver = true;
+            clearInterval(matchTimerInterval);
+            showWinner(team);
+        }
+    }
+    
+    updateDisplay();
+    saveToStorage();
+}
+
+function addGame(team) {
+    // Manual game add (tap on game score)
+    if (state.matchOver) return;
+    saveHistory();
+    winGame(team);
+}
+
+// ─────────────────────────────────────────
+// DISPLAY
+// ─────────────────────────────────────────
+function updateDisplay() {
+    // Points
+    for (let t = 0; t < 2; t++) {
+        const el = document.getElementById('points' + t);
+        const isGolden = state.points[0] === 3 && state.points[1] === 3 && settings.goldenPoint;
+        
+        if (isGolden) {
+            el.textContent = '🥇';
+            el.className = 'points-display golden';
+            document.getElementById('statusMsg').innerHTML = 
+                '<span class="golden-point-msg">⚡ GOLDEN POINT ⚡</span>';
+        } else {
+            el.textContent = POINT_LABELS[state.points[t]] || '0';
+            el.className = 'points-display';
+            document.getElementById('statusMsg').textContent = 
+                'Tap score to add point • Tap name to edit';
+        }
+        
+        // Games
+        document.getElementById('games' + t).textContent = state.games[t];
+        
+        // Serving
+        document.getElementById('row' + t).className = 
+            'player-row' + (state.serving === t ? ' serving' : '');
+        
+        // Sets
+        renderSets(t);
+    }
+    
+    updateTimerDisplay();
+}
+
+function renderSets(team) {
+    const el = document.getElementById('sets' + team);
+    const numSets = state.sets[0].length;
+    
+    if (numSets === 0) {
+        el.innerHTML = '<div class="set-label">Sets</div>';
+        return;
+    }
+    
+    let html = '<div class="set-label">Sets</div>';
+    for (let i = 0; i < numSets; i++) {
+        html += `<div class="set-score">${state.sets[team][i]}</div>`;
+    }
+    el.innerHTML = html;
+}
+
+// ─────────────────────────────────────────
+// WIN
+// ─────────────────────────────────────────
+function showWinner(team) {
+    const opp = 1 - team;
+    const name1 = team === 0 ? playerNames[0] + ' / ' + playerNames[1] : playerNames[2] + ' / ' + playerNames[3];
+    
+    let scoreStr = '';
+    for (let i = 0; i < state.sets[0].length; i++) {
+        scoreStr += `${state.sets[team][i]}-${state.sets[opp][i]}  `;
+    }
+    
+    document.getElementById('winText').textContent = '🏆 ' + name1;
+    document.getElementById('winSubtext').textContent = 'Wins the Match!';
+    document.getElementById('winScore').textContent = 'Score: ' + scoreStr.trim();
+    document.getElementById('winOverlay').className = 'win-overlay show';
+}
+
+// ─────────────────────────────────────────
+// UNDO
+// ─────────────────────────────────────────
+function saveHistory() {
+    history.push(JSON.parse(JSON.stringify(state)));
+    if (history.length > MAX_HISTORY) history.shift();
+}
+
+function undo() {
+    if (history.length === 0) return;
+    state = history.pop();
+    updateDisplay();
+    saveToStorage();
+    document.getElementById('statusMsg').textContent = '↩ Undone!';
+    setTimeout(() => {
+        document.getElementById('statusMsg').textContent = 'Tap score to add point • Tap name to edit';
+    }, 1500);
+}
+
+// ─────────────────────────────────────────
+// NAMES
+// ─────────────────────────────────────────
+function editName(index) {
+    const el = document.getElementById('name' + index);
+    el.contentEditable = 'true';
+    el.className = 'player-name editing';
+    el.focus();
+    
+    // Select all text
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function saveName(index, el) {
+    el.contentEditable = 'false';
+    el.className = 'player-name';
+    playerNames[index] = el.textContent.trim() || ('Player ' + (index + 1));
+    el.textContent = playerNames[index];
+    saveToStorage();
+}
+
+// ─────────────────────────────────────────
+// MODALS
+// ─────────────────────────────────────────
+function showNewGameModal() {
+    document.getElementById('newGameModal').className = 'modal-overlay show';
+}
+
+function showSettingsModal() {
+    document.getElementById('settingsModal').className = 'modal-overlay show';
+}
+
+function closeModal(id) {
+    document.getElementById(id).className = 'modal-overlay';
+}
+
+function newGame() {
+    state = {
+        points: [0, 0],
+        games: [0, 0],
+        sets: [[], []],
+        serving: 0,
+        goldenPoint: false,
+        matchOver: false
+    };
+    history = [];
+    matchSeconds = 0;
+    
+    clearInterval(matchTimerInterval);
+    matchTimerInterval = setInterval(() => {
+        matchSeconds++;
+        updateTimerDisplay();
+        saveToStorage();
+    }, 1000);
+    
+    document.getElementById('winOverlay').className = 'win-overlay';
+    closeModal('newGameModal');
+    updateDisplay();
+    saveToStorage();
+}
+
+function saveSettings() {
+    settings.setsToWin = parseInt(document.getElementById('setsToWin').value);
+    settings.goldenPoint = document.getElementById('goldenPointSetting').value === 'true';
+    settings.courtMinutes = parseInt(document.getElementById('courtTimeSetting').value);
+    courtSeconds = settings.courtMinutes * 60;
+    closeModal('settingsModal');
+    updateDisplay();
+    saveToStorage();
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', function(e) {
+        if (e.target === this) closeModal(this.id);
+    });
+});
+
+// ─────────────────────────────────────────
+// START
+// ─────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
