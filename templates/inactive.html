@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subscription Inactive</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #0a0e1a;
+    color: white;
+    font-family: 'Arial', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.container {
+    text-align: center;
+    padding: 40px;
+    max-width: 500px;
+}
+
+.icon { font-size: 80px; margin-bottom: 20px; }
+
+h1 {
+    font-size: 32px;
+    color: #ff6b6b;
+    margin-bottom: 12px;
+}
+
+p {
+    color: #aaa;
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.btn {
+    display: inline-block;
+    padding: 14px 32px;
+    background: linear-gradient(135deg, #00d4ff, #0099cc);
+    color: white;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: bold;
+    transition: opacity 0.2s;
+}
+
+.btn:hover { opacity: 0.85; }
+
+.club-name {
+    color: #00d4ff;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+<div class="container">
+    <div class="icon">🔒</div>
+    <h1>Subscription Inactive</h1>
+    <p>
+        The scoreboard for <span class="club-name">{{ club.club_name }}</span> 
+        is currently unavailable because the subscription has expired or the 
+        free trial has ended.
+    </p>
+    <p>
+        If you are the club owner, please log in to your dashboard to 
+        renew your subscription.
+    </p>
+    <a href="/login" class="btn">Owner Login</a>
+</div>
+</body>
+</html>
