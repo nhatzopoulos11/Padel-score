@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Your Club - Padel Score Keeper</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            color: #00d4ff;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .logo p {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .trial-badge {
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            color: white;
+            text-align: center;
+            padding: 10px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 10px;
+            color: white;
+            font-size: 15px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(255,255,255,0.12);
+        }
+
+        select option {
+            background: #1a1a2e;
+            color: white;
+        }
+
+        .btn-register {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: opacity 0.3s;
+        }
+
+        .btn-register:hover {
+            opacity: 0.9;
+        }
+
+        .login-link {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 13px;
+        }
+
+        .login-link a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+
+        .error {
+            background: rgba(255, 50, 50, 0.2);
+            border: 1px solid rgba(255, 50, 50, 0.4);
+            color: #ff6b6b;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .pricing-note {
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        .pricing-note strong {
+            color: rgba(255,255,255,0.7);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">
+            <h1>🎾 Padel Score</h1>
+            <p>Professional Score Keeping for Padel Clubs</p>
+        </div>
+
+        <div class="trial-badge">
+            🎉 14-Day Free Trial — No Credit Card Required
+        </div>
+
+        {% if error %}
+        <div class="error">⚠️ {{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="/register">
+            <div class="form-group">
+                <label>Club Name</label>
+                <input 
+                    type="text" 
+                    name="club_name" 
+                    placeholder="e.g. Madrid Padel Club"
+                    required
+                    value="{{ request.form.get('club_name', '') }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Your Name</label>
+                <input 
+                    type="text" 
+                    name="owner_name" 
+                    placeholder="e.g. Carlos García"
+                    required
+                    value="{{ request.form.get('owner_name', '') }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Email Address</label>
+                <input 
+                    type="email" 
+                    name="email" 
+                    placeholder="carlos@madridpadel.com"
+                    required
+                    value="{{ request.form.get('email', '') }}"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Password</label>
+                <input 
+                    type="password" 
+                    name="password" 
+                    placeholder="Minimum 6 characters"
+                    required
+                >
+            </div>
+
+            <div class="form-group">
+                <label>Number of Courts</label>
+                <select name="num_courts" required>
+                    <option value="">Select courts...</option>
+                    <option value="1" {% if request.form.get('num_courts') == '1' %}selected{% endif %}>1 Court — €29/month</option>
+                    <option value="2" {% if request.form.get('num_courts') == '2' %}selected{% endif %}>2 Courts — €58/month</option>
+                    <option value="3" {% if request.form.get('num_courts') == '3' %}selected{% endif %}>3 Courts — €87/month</option>
+                    <option value="4" {% if request.form.get('num_courts') == '4' %}selected{% endif %}>4 Courts — €116/month</option>
+                    <option value="5" {% if request.form.get('num_courts') == '5' %}selected{% endif %}>5 Courts — €145/month</option>
+                    <option value="6" {% if request.form.get('num_courts') == '6' %}selected{% endif %}>6 Courts — €174/month</option>
+                    <option value="8" {% if request.form.get('num_courts') == '8' %}selected{% endif %}>8 Courts — €232/month</option>
+                    <option value="10" {% if request.form.get('num_courts') == '10' %}selected{% endif %}>10 Courts — €290/month</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-register">
+                Start Free Trial →
+            </button>
+        </form>
+
+        <div class="pricing-note">
+            After trial: <strong>€29/month per court</strong> • Cancel anytime
+        </div>
+
+        <div class="login-link">
+            Already have an account? <a href="/login">Log in here</a>
+        </div>
+    </div>
+</body>
+</html>
