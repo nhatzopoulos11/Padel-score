@@ -1,3 +1,5 @@
 flask
-flask-cors
+flask-sqlalchemy
+flask-login
+werkzeug
 gunicorn
