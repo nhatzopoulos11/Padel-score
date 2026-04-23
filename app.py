@@ -1,8 +1,10 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, send_file
 from models import db, Club, Court
 from auth import hash_password, check_password
 from datetime import datetime
 import os
+import qrcode
+import io
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -38,11 +40,9 @@ def register():
         owner_name = request.form.get('owner_name', '').strip()
         num_courts = int(request.form.get('num_courts', 1))
 
-        # Check if email exists
         if Club.query.filter_by(email=email).first():
             return render_template('register.html', error='Email already registered')
 
-        # Create club
         club = Club(
             email=email,
             password_hash=hash_password(password),
@@ -50,9 +50,8 @@ def register():
             owner_name=owner_name
         )
         db.session.add(club)
-        db.session.flush()  # Get club.id before commit
+        db.session.flush()
 
-        # Create courts
         for i in range(1, num_courts + 1):
             court = Court(
                 club_id=club.id,
@@ -61,7 +60,6 @@ def register():
             db.session.add(court)
 
         db.session.commit()
-
         session['club_id'] = club.id
         return redirect('/dashboard')
 
@@ -111,17 +109,66 @@ def dashboard():
     return render_template('dashboard.html', club=club, courts=courts)
 
 # ─────────────────────────────────────────
-# COURT SCOREBOARD
+# COURT SCOREBOARD (by UUID token)
 # ─────────────────────────────────────────
-@app.route('/court/<int:court_id>')
-def court(court_id):
-    court = Court.query.get_or_404(court_id)
-    club = Club.query.get(court.club_id)
+@app.route('/court/<token>')
+def court(token):
+    # Try UUID token first
+    court = Court.query.filter_by(access_token=token).first()
+
+    # Fallback: try numeric ID for old links
+    if not court:
+        try:
+            court = Court.query.get(int(token))
+        except (ValueError, TypeError):
+            pass
+
+    if not court:
+        return "Court not found", 404
+
+    club = court.club
 
     if not club.is_active:
         return render_template('inactive.html', club=club)
 
     return render_template('scoreboard.html', court=court, club=club)
+
+# ─────────────────────────────────────────
+# QR CODE GENERATOR
+# ─────────────────────────────────────────
+@app.route('/qr/<token>')
+def qr_code(token):
+    # Try UUID token first
+    court = Court.query.filter_by(access_token=token).first()
+
+    # Fallback: try numeric ID
+    if not court:
+        try:
+            court = Court.query.get(int(token))
+        except (ValueError, TypeError):
+            return "Court not found", 404
+
+    if not court:
+        return "Court not found", 404
+
+    # Generate QR pointing to the UUID token URL
+    url = f"https://web-production-c823c.up.railway.app/court/{court.access_token}"
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="black", back_color="white")
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+
+    return send_file(buf, mimetype='image/png')
 
 # ─────────────────────────────────────────
 # RUN
