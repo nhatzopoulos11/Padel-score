@@ -4,3 +4,4 @@ Werkzeug==3.0.1
 gunicorn==21.2.0
 stripe==7.8.0
 qrcode[pil]==7.4.2
+psycopg2-binary==2.9.9
