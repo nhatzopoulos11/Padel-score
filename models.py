@@ -22,7 +22,7 @@ class Club(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    courts = db.relationship('Court', backref='club', lazy=True)
+    courts = db.relationship('Court', backref='club', lazy=True, cascade='all, delete-orphan')
 
     def trial_days_left(self):
         if self.trial_end is None:
@@ -51,5 +51,21 @@ class Court(db.Model):
     # Timestamps
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # Court state relationship
+    state = db.relationship('CourtState', backref='court', lazy=True, 
+                            uselist=False, cascade='all, delete-orphan')
+
     def __repr__(self):
         return f'<Court {self.court_name}>'
+
+
+class CourtState(db.Model):
+    __tablename__ = 'court_states'
+
+    id = db.Column(db.Integer, primary_key=True)
+    court_id = db.Column(db.Integer, db.ForeignKey('courts.id'), nullable=False, unique=True)
+    state_json = db.Column(db.Text, nullable=False, default='{}')
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<CourtState court_id={self.court_id}>'
