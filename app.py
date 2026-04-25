@@ -1,10 +1,11 @@
-from flask import Flask, render_template, request, redirect, session, send_file
-from models import db, Club, Court
+from flask import Flask, render_template, request, redirect, session, send_file, jsonify
+from models import db, Club, Court, CourtState
 from auth import hash_password, check_password
 from datetime import datetime
 import os
 import qrcode
 import io
+import json
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -109,11 +110,73 @@ def dashboard():
     return render_template('dashboard.html', club=club, courts=courts)
 
 # ─────────────────────────────────────────
+# ADD COURT
+# ─────────────────────────────────────────
+@app.route('/court/add', methods=['POST'])
+def add_court():
+    if 'club_id' not in session:
+        return redirect('/login')
+
+    club = Club.query.get(session['club_id'])
+    if not club:
+        session.clear()
+        return redirect('/login')
+
+    court_name = request.form.get('court_name', '').strip()
+    if not court_name:
+        existing_count = Court.query.filter_by(club_id=club.id).count()
+        court_name = f'Court {existing_count + 1}'
+
+    court = Court(
+        club_id=club.id,
+        court_name=court_name
+    )
+    db.session.add(court)
+    db.session.commit()
+
+    return redirect('/dashboard')
+
+# ─────────────────────────────────────────
+# RENAME COURT
+# ─────────────────────────────────────────
+@app.route('/court/<int:court_id>/rename', methods=['POST'])
+def rename_court(court_id):
+    if 'club_id' not in session:
+        return redirect('/login')
+
+    court = Court.query.filter_by(id=court_id, club_id=session['club_id']).first()
+    if not court:
+        return "Court not found or access denied", 404
+
+    new_name = request.form.get('court_name', '').strip()
+    if new_name:
+        court.court_name = new_name
+        db.session.commit()
+
+    return redirect('/dashboard')
+
+# ─────────────────────────────────────────
+# DELETE COURT
+# ─────────────────────────────────────────
+@app.route('/court/<int:court_id>/delete', methods=['POST'])
+def delete_court(court_id):
+    if 'club_id' not in session:
+        return redirect('/login')
+
+    court = Court.query.filter_by(id=court_id, club_id=session['club_id']).first()
+    if not court:
+        return "Court not found or access denied", 404
+
+    db.session.delete(court)
+    db.session.commit()
+
+    return redirect('/dashboard')
+
+# ─────────────────────────────────────────
 # COURT SCOREBOARD (by UUID token)
 # ─────────────────────────────────────────
 @app.route('/court/<token>')
 def court(token):
-    # Try UUID token first
     court = Court.query.filter_by(access_token=token).first()
 
     # Fallback: try numeric ID for old links
@@ -128,20 +191,75 @@ def court(token):
 
     club = court.club
 
-    if not club.is_active:
+    if not club.can_access():
         return render_template('inactive.html', club=club)
 
     return render_template('scoreboard.html', court=court, club=club)
+
+# ─────────────────────────────────────────
+# API: GET COURT STATE
+# ─────────────────────────────────────────
+@app.route('/api/court/<token>/state', methods=['GET'])
+def get_court_state(token):
+    court = Court.query.filter_by(access_token=token).first()
+    if not court:
+        return jsonify({'error': 'Court not found'}), 404
+
+    if not court.club.can_access():
+        return jsonify({'error': 'Subscription inactive'}), 403
+
+    court_state = CourtState.query.filter_by(court_id=court.id).first()
+
+    if not court_state:
+        return jsonify({'state': {}, 'updated_at': None})
+
+    return jsonify({
+        'state': json.loads(court_state.state_json),
+        'updated_at': court_state.updated_at.isoformat() if court_state.updated_at else None
+    })
+
+# ─────────────────────────────────────────
+# API: SAVE COURT STATE
+# ─────────────────────────────────────────
+@app.route('/api/court/<token>/state', methods=['POST'])
+def save_court_state(token):
+    court = Court.query.filter_by(access_token=token).first()
+    if not court:
+        return jsonify({'error': 'Court not found'}), 404
+
+    if not court.club.can_access():
+        return jsonify({'error': 'Subscription inactive'}), 403
+
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+
+    court_state = CourtState.query.filter_by(court_id=court.id).first()
+
+    if court_state:
+        court_state.state_json = json.dumps(data)
+        court_state.updated_at = datetime.utcnow()
+    else:
+        court_state = CourtState(
+            court_id=court.id,
+            state_json=json.dumps(data)
+        )
+        db.session.add(court_state)
+
+    db.session.commit()
+
+    return jsonify({
+        'success': True,
+        'updated_at': court_state.updated_at.isoformat()
+    })
 
 # ─────────────────────────────────────────
 # QR CODE GENERATOR
 # ─────────────────────────────────────────
 @app.route('/qr/<token>')
 def qr_code(token):
-    # Try UUID token first
     court = Court.query.filter_by(access_token=token).first()
 
-    # Fallback: try numeric ID
     if not court:
         try:
             court = Court.query.get(int(token))
@@ -151,7 +269,6 @@ def qr_code(token):
     if not court:
         return "Court not found", 404
 
-    # Generate QR pointing to the UUID token URL
     url = f"https://web-production-c823c.up.railway.app/court/{court.access_token}"
 
     qr = qrcode.QRCode(
@@ -169,6 +286,16 @@ def qr_code(token):
     buf.seek(0)
 
     return send_file(buf, mimetype='image/png')
+
+# ─────────────────────────────────────────
+# SUBSCRIBE (Stripe - placeholder)
+# ─────────────────────────────────────────
+@app.route('/subscribe')
+def subscribe():
+    if 'club_id' not in session:
+        return redirect('/login')
+    # Stripe checkout will go here
+    return render_template('subscribe.html')
 
 # ─────────────────────────────────────────
 # RUN
