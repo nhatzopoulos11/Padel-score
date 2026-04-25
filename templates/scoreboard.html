@@ -18,7 +18,6 @@ body {
     user-select: none;
 }
 
-/* HEADER */
 .header {
     display: flex;
     justify-content: space-between;
@@ -30,7 +29,6 @@ body {
 .header-left { font-size: 14px; color: #00d4ff; font-weight: bold; }
 .header-right { font-size: 12px; color: #888; }
 
-/* TIMER */
 .timer-bar {
     text-align: center;
     padding: 6px;
@@ -41,7 +39,20 @@ body {
 .timer-bar span { color: #00d4ff; font-weight: bold; font-size: 15px; }
 .timer-warning { color: #ff6b6b !important; }
 
-/* SCOREBOARD */
+/* SYNC INDICATOR */
+.sync-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #00ff88;
+    margin-left: 8px;
+    vertical-align: middle;
+    transition: background 0.3s;
+}
+.sync-dot.syncing { background: #ffd700; }
+.sync-dot.error { background: #ff4444; }
+
 .scoreboard {
     flex: 1;
     display: flex;
@@ -50,7 +61,6 @@ body {
     gap: 6px;
 }
 
-/* PLAYER ROW */
 .player-row {
     flex: 1;
     display: grid;
@@ -71,7 +81,6 @@ body {
     50% { background: rgba(0,212,255,0.2); }
 }
 
-/* NAMES */
 .player-names { display: flex; flex-direction: column; gap: 2px; }
 .player-name {
     font-size: 22px;
@@ -98,7 +107,6 @@ body {
 }
 .player-row.serving .serve-dot { opacity: 1; }
 
-/* SCORES */
 .scores {
     display: flex;
     gap: 12px;
@@ -135,7 +143,6 @@ body {
 }
 .games-display:hover { background: rgba(255,255,255,0.1); }
 
-/* SETS */
 .sets-display {
     display: flex;
     flex-direction: column;
@@ -155,14 +162,12 @@ body {
     text-align: center;
 }
 
-/* DIVIDER */
 .divider {
     height: 2px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
     margin: 2px 8px;
 }
 
-/* CONTROLS */
 .controls {
     padding: 10px 16px;
     display: flex;
@@ -189,7 +194,6 @@ body {
 .btn-new-game { background: #1a3a2a; color: #00ff88; border: 1px solid #00ff88; }
 .btn-settings { background: #1a1a2e; color: #888; border: 1px solid #333; }
 
-/* STATUS BAR */
 .status-bar {
     text-align: center;
     padding: 4px;
@@ -199,7 +203,6 @@ body {
 }
 .status-bar .golden-point-msg { color: #ffd700; font-weight: bold; font-size: 14px; }
 
-/* MODAL */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -234,7 +237,6 @@ body {
 .modal-btn-danger { background: linear-gradient(135deg, #ff4444, #cc0000); color: white; }
 .modal-btn-cancel { background: #2a2a3e; color: #aaa; }
 
-/* WIN OVERLAY */
 .win-overlay {
     display: none;
     position: fixed;
@@ -254,23 +256,22 @@ body {
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
-    <div class="header-left">🎾 {{ club.club_name }} — {{ court.court_name }}</div>
+    <div class="header-left">
+        🎾 {{ club.club_name }} — {{ court.court_name }}
+        <span class="sync-dot" id="syncDot" title="Sync status"></span>
+    </div>
     <div class="header-right" id="currentTime"></div>
 </div>
 
-<!-- TIMER BAR -->
 <div class="timer-bar">
     ⏱ Match time: <span id="matchTimer">00:00</span>
     &nbsp;&nbsp;|&nbsp;&nbsp;
     🏟 Court time: <span id="courtTimer">30:00</span>
 </div>
 
-<!-- SCOREBOARD -->
 <div class="scoreboard">
 
-    <!-- TEAM 1 -->
     <div class="player-row serving" id="row0">
         <div class="player-names">
             <div class="player-name" id="name0" contenteditable="false"
@@ -288,7 +289,6 @@ body {
 
     <div class="divider"></div>
 
-    <!-- TEAM 2 -->
     <div class="player-row" id="row1">
         <div class="player-names">
             <div class="player-name" id="name2" contenteditable="false"
@@ -306,12 +306,10 @@ body {
 
 </div>
 
-<!-- STATUS BAR -->
 <div class="status-bar">
     <span id="statusMsg">Tap score to add point • Tap name to edit • Match in progress</span>
 </div>
 
-<!-- CONTROLS -->
 <div class="controls">
     <button class="btn btn-undo" onclick="undo()">↩ Undo</button>
     <button class="btn btn-new-game" onclick="showNewGameModal()">+ New Match</button>
@@ -368,10 +366,19 @@ body {
     <div class="win-text" id="winText">🏆 Team Wins!</div>
     <div class="win-subtext" id="winSubtext"></div>
     <div class="win-score" id="winScore"></div>
-    <button class="modal-btn modal-btn-primary" style="min-width:200px; padding:16px; font-size:18px;" onclick="newGame()">New Match</button>
+    <button class="modal-btn modal-btn-primary" 
+            style="min-width:200px; padding:16px; font-size:18px;" 
+            onclick="newGame()">New Match</button>
 </div>
 
 <script>
+// ─────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────
+const COURT_TOKEN = "{{ court.access_token }}";
+const STORAGE_KEY = 'court_{{ court.id }}';
+const POLL_INTERVAL = 2000; // poll server every 2 seconds
+
 // ─────────────────────────────────────────
 // GAME STATE
 // ─────────────────────────────────────────
@@ -392,6 +399,7 @@ let settings = {
 
 let history = [];
 const MAX_HISTORY = 50;
+let playerNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
 
 // Timers
 let matchSeconds = 0;
@@ -399,50 +407,152 @@ let courtSeconds = 0;
 let matchTimerInterval = null;
 let courtTimerInterval = null;
 
-// Player names
-let playerNames = ['Player 1', 'Player 2', 'Player 3', 'Player 4'];
+// Sync control
+let lastSyncTime = 0;
+let isSyncing = false;
+let syncPollInterval = null;
 
 // ─────────────────────────────────────────
 // INIT
 // ─────────────────────────────────────────
-function init() {
-    loadFromStorage();
+async function init() {
+    // First try server, then fall back to localStorage
+    const loaded = await loadFromServer();
+    if (!loaded) {
+        loadFromLocalStorage();
+    }
     startTimers();
+    startPolling();
     updateDisplay();
     updateClock();
     setInterval(updateClock, 1000);
 }
 
-function loadFromStorage() {
-    const key = 'court_{{ court.id }}';
-    const saved = localStorage.getItem(key);
-    if (saved) {
-        try {
-            const data = JSON.parse(saved);
-            state = data.state || state;
-            settings = data.settings || settings;
-            playerNames = data.playerNames || playerNames;
-            matchSeconds = data.matchSeconds || 0;
-            courtSeconds = data.courtSeconds || 0;
-            
-            // Restore settings UI
-            document.getElementById('setsToWin').value = settings.setsToWin;
-            document.getElementById('goldenPointSetting').value = settings.goldenPoint;
-            document.getElementById('courtTimeSetting').value = settings.courtMinutes;
-            
-            // Restore names
-            for (let i = 0; i < 4; i++) {
-                document.getElementById('name' + i).textContent = playerNames[i];
-            }
-        } catch(e) {}
+// ─────────────────────────────────────────
+// SERVER SYNC
+// ─────────────────────────────────────────
+async function loadFromServer() {
+    try {
+        setSyncStatus('syncing');
+        const res = await fetch(`/api/court/${COURT_TOKEN}/state`);
+        if (!res.ok) { setSyncStatus('error'); return false; }
+        const data = await res.json();
+        if (!data || Object.keys(data).length === 0) {
+            setSyncStatus('ok');
+            return false; // No server data yet, use localStorage
+        }
+        applyData(data);
+        lastSyncTime = data.syncTime || 0;
+        setSyncStatus('ok');
+        return true;
+    } catch(e) {
+        setSyncStatus('error');
+        return false;
     }
 }
 
-function saveToStorage() {
-    const key = 'court_{{ court.id }}';
-    localStorage.setItem(key, JSON.stringify({
-        state, settings, playerNames, matchSeconds, courtSeconds
+async function saveToServer() {
+    if (isSyncing) return;
+    isSyncing = true;
+    setSyncStatus('syncing');
+
+    const payload = {
+        state,
+        settings,
+        playerNames,
+        matchSeconds,
+        courtSeconds,
+        syncTime: Date.now()
+    };
+
+    try {
+        const res = await fetch(`/api/court/${COURT_TOKEN}/state`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            lastSyncTime = payload.syncTime;
+            setSyncStatus('ok');
+        } else {
+            setSyncStatus('error');
+        }
+    } catch(e) {
+        setSyncStatus('error');
+    }
+    isSyncing = false;
+}
+
+function startPolling() {
+    syncPollInterval = setInterval(async () => {
+        try {
+            const res = await fetch(`/api/court/${COURT_TOKEN}/state`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data || Object.keys(data).length === 0) return;
+
+            // Only update if server has NEWER data than us
+            const serverTime = data.syncTime || 0;
+            if (serverTime > lastSyncTime) {
+                lastSyncTime = serverTime;
+                applyData(data);
+                updateDisplay();
+                setSyncStatus('ok');
+            }
+        } catch(e) {}
+    }, POLL_INTERVAL);
+}
+
+function applyData(data) {
+    if (data.state) state = data.state;
+    if (data.settings) {
+        settings = data.settings;
+        // Update settings UI
+        document.getElementById('setsToWin').value = settings.setsToWin;
+        document.getElementById('goldenPointSetting').value = settings.goldenPoint;
+        document.getElementById('courtTimeSetting').value = settings.courtMinutes;
+    }
+    if (data.playerNames) {
+        playerNames = data.playerNames;
+        for (let i = 0; i < 4; i++) {
+            document.getElementById('name' + i).textContent = playerNames[i];
+        }
+    }
+    if (data.matchSeconds !== undefined) matchSeconds = data.matchSeconds;
+    if (data.courtSeconds !== undefined) courtSeconds = data.courtSeconds;
+}
+
+// ─────────────────────────────────────────
+// LOCAL STORAGE (backup)
+// ─────────────────────────────────────────
+function loadFromLocalStorage() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    try {
+        const data = JSON.parse(saved);
+        applyData(data);
+    } catch(e) {}
+}
+
+function saveToLocalStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        state, settings, playerNames, matchSeconds, courtSeconds,
+        syncTime: lastSyncTime
     }));
+}
+
+// Combined save — always do both
+function saveState() {
+    saveToLocalStorage();
+    saveToServer();
+}
+
+// ─────────────────────────────────────────
+// SYNC DOT UI
+// ─────────────────────────────────────────
+function setSyncStatus(status) {
+    const dot = document.getElementById('syncDot');
+    dot.className = 'sync-dot' + (status === 'ok' ? '' : ' ' + status);
 }
 
 // ─────────────────────────────────────────
@@ -453,7 +563,6 @@ function startTimers() {
         matchTimerInterval = setInterval(() => {
             matchSeconds++;
             updateTimerDisplay();
-            saveToStorage();
         }, 1000);
     }
 
@@ -466,7 +575,6 @@ function startTimers() {
         updateTimerDisplay();
     }, 1000);
 
-    // Init court timer if 0
     if (courtSeconds === 0) {
         courtSeconds = settings.courtMinutes * 60;
     }
@@ -474,15 +582,9 @@ function startTimers() {
 
 function updateTimerDisplay() {
     document.getElementById('matchTimer').textContent = formatTime(matchSeconds);
-    
     const courtEl = document.getElementById('courtTimer');
     courtEl.textContent = formatTime(courtSeconds);
-    
-    if (courtSeconds <= 300) { // 5 min warning
-        courtEl.className = 'timer-warning';
-    } else {
-        courtEl.className = '';
-    }
+    courtEl.className = courtSeconds <= 300 ? 'timer-warning' : '';
 }
 
 function formatTime(seconds) {
@@ -493,7 +595,7 @@ function formatTime(seconds) {
 
 function updateClock() {
     const now = new Date();
-    document.getElementById('currentTime').textContent = 
+    document.getElementById('currentTime').textContent =
         now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
 }
 
@@ -504,65 +606,50 @@ const POINT_LABELS = ['0', '15', '30', '40', 'AD'];
 
 function addPoint(team) {
     if (state.matchOver) return;
-    
     saveHistory();
-    
     const opp = 1 - team;
-    
-    // Golden Point situation (both at 40 = index 3)
+
+    // Golden Point — both at 40
     if (state.points[0] === 3 && state.points[1] === 3) {
         if (settings.goldenPoint) {
-            // Golden point - whoever wins this wins the game
             winGame(team);
             return;
         } else {
-            // Normal deuce - need AD
             state.points[team] = 4; // AD
             updateDisplay();
-            saveToStorage();
+            saveState();
             return;
         }
     }
-    
-    // AD situation
+
+    // AD situations
     if (state.points[team] === 4) {
-        // Already AD, win the game
         winGame(team);
         return;
     }
-    
     if (state.points[opp] === 4) {
-        // Opponent had AD, back to deuce
         state.points[0] = 3;
         state.points[1] = 3;
         updateDisplay();
-        saveToStorage();
+        saveState();
         return;
     }
-    
+
     // Normal point
     state.points[team]++;
-    
-    // Check if won game (reached beyond 40 = index 3 when opp < 3)
     if (state.points[team] === 4 && state.points[opp] < 3) {
         winGame(team);
         return;
     }
-    // Actually index 3 is "40", need 4 points (0,1,2,3) to win normally
-    // Win game when point index would be 4 and opponent < 3
-    
+
     updateDisplay();
-    saveToStorage();
+    saveState();
 }
 
 function winGame(team) {
     state.points = [0, 0];
     state.games[team]++;
-    
-    // Switch serve after each game
     state.serving = 1 - state.serving;
-    
-    // Check set win
     checkSetWin(team);
 }
 
@@ -570,33 +657,27 @@ function checkSetWin(team) {
     const opp = 1 - team;
     const tGames = state.games[team];
     const oGames = state.games[opp];
-    
-    // Win set: 6 games with 2 ahead, or 7-5, or tiebreak at 7-6
-    const wonSet = (tGames >= 6 && tGames - oGames >= 2) || 
-                   tGames === 7;
-    
+
+    const wonSet = (tGames >= 6 && tGames - oGames >= 2) || tGames === 7;
+
     if (wonSet) {
-        // Save set scores
         state.sets[0].push(state.games[0]);
         state.sets[1].push(state.games[1]);
         state.games = [0, 0];
-        
-        // Check match win
+
         const setsWon = state.sets[team].filter((s, i) => s > state.sets[opp][i]).length;
-        
         if (setsWon >= settings.setsToWin) {
             state.matchOver = true;
             clearInterval(matchTimerInterval);
             showWinner(team);
         }
     }
-    
+
     updateDisplay();
-    saveToStorage();
+    saveState();
 }
 
 function addGame(team) {
-    // Manual game add (tap on game score)
     if (state.matchOver) return;
     saveHistory();
     winGame(team);
@@ -606,46 +687,40 @@ function addGame(team) {
 // DISPLAY
 // ─────────────────────────────────────────
 function updateDisplay() {
-    // Points
     for (let t = 0; t < 2; t++) {
         const el = document.getElementById('points' + t);
         const isGolden = state.points[0] === 3 && state.points[1] === 3 && settings.goldenPoint;
-        
+
         if (isGolden) {
             el.textContent = '🥇';
             el.className = 'points-display golden';
-            document.getElementById('statusMsg').innerHTML = 
+            document.getElementById('statusMsg').innerHTML =
                 '<span class="golden-point-msg">⚡ GOLDEN POINT ⚡</span>';
         } else {
             el.textContent = POINT_LABELS[state.points[t]] || '0';
             el.className = 'points-display';
-            document.getElementById('statusMsg').textContent = 
+            document.getElementById('statusMsg').textContent =
                 'Tap score to add point • Tap name to edit';
         }
-        
-        // Games
+
         document.getElementById('games' + t).textContent = state.games[t];
-        
-        // Serving
-        document.getElementById('row' + t).className = 
+        document.getElementById('row' + t).className =
             'player-row' + (state.serving === t ? ' serving' : '');
-        
-        // Sets
         renderSets(t);
     }
-    
+
     updateTimerDisplay();
 }
 
 function renderSets(team) {
     const el = document.getElementById('sets' + team);
     const numSets = state.sets[0].length;
-    
+
     if (numSets === 0) {
         el.innerHTML = '<div class="set-label">Sets</div>';
         return;
     }
-    
+
     let html = '<div class="set-label">Sets</div>';
     for (let i = 0; i < numSets; i++) {
         html += `<div class="set-score">${state.sets[team][i]}</div>`;
@@ -658,13 +733,15 @@ function renderSets(team) {
 // ─────────────────────────────────────────
 function showWinner(team) {
     const opp = 1 - team;
-    const name1 = team === 0 ? playerNames[0] + ' / ' + playerNames[1] : playerNames[2] + ' / ' + playerNames[3];
-    
+    const name1 = team === 0
+        ? playerNames[0] + ' / ' + playerNames[1]
+        : playerNames[2] + ' / ' + playerNames[3];
+
     let scoreStr = '';
     for (let i = 0; i < state.sets[0].length; i++) {
         scoreStr += `${state.sets[team][i]}-${state.sets[opp][i]}  `;
     }
-    
+
     document.getElementById('winText').textContent = '🏆 ' + name1;
     document.getElementById('winSubtext').textContent = 'Wins the Match!';
     document.getElementById('winScore').textContent = 'Score: ' + scoreStr.trim();
@@ -683,10 +760,11 @@ function undo() {
     if (history.length === 0) return;
     state = history.pop();
     updateDisplay();
-    saveToStorage();
+    saveState();
     document.getElementById('statusMsg').textContent = '↩ Undone!';
     setTimeout(() => {
-        document.getElementById('statusMsg').textContent = 'Tap score to add point • Tap name to edit';
+        document.getElementById('statusMsg').textContent =
+            'Tap score to add point • Tap name to edit';
     }, 1500);
 }
 
@@ -698,8 +776,6 @@ function editName(index) {
     el.contentEditable = 'true';
     el.className = 'player-name editing';
     el.focus();
-    
-    // Select all text
     const range = document.createRange();
     range.selectNodeContents(el);
     const sel = window.getSelection();
@@ -712,7 +788,7 @@ function saveName(index, el) {
     el.className = 'player-name';
     playerNames[index] = el.textContent.trim() || ('Player ' + (index + 1));
     el.textContent = playerNames[index];
-    saveToStorage();
+    saveState();
 }
 
 // ─────────────────────────────────────────
@@ -741,18 +817,17 @@ function newGame() {
     };
     history = [];
     matchSeconds = 0;
-    
+
     clearInterval(matchTimerInterval);
     matchTimerInterval = setInterval(() => {
         matchSeconds++;
         updateTimerDisplay();
-        saveToStorage();
     }, 1000);
-    
+
     document.getElementById('winOverlay').className = 'win-overlay';
     closeModal('newGameModal');
     updateDisplay();
-    saveToStorage();
+    saveState();
 }
 
 function saveSettings() {
@@ -762,10 +837,9 @@ function saveSettings() {
     courtSeconds = settings.courtMinutes * 60;
     closeModal('settingsModal');
     updateDisplay();
-    saveToStorage();
+    saveState();
 }
 
-// Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(el => {
     el.addEventListener('click', function(e) {
         if (e.target === this) closeModal(this.id);
