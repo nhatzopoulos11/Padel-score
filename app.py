@@ -300,7 +300,7 @@ def save_court_state(token):
 
 
 # ============================================================
-# SCOREBOARD PAGE
+# SCOREBOARD PAGE  (public display view)
 # ============================================================
 @app.route('/court/<token>')
 def scoreboard(token):
@@ -313,6 +313,22 @@ def scoreboard(token):
         return render_template('inactive.html', club=club)
 
     return render_template('scoreboard.html', court=court, club=club)
+
+
+# ============================================================
+# SCORING PAGE  (operator view — mobile scorer)
+# ============================================================
+@app.route('/court/<token>/play')
+def scoring(token):
+    court = Court.query.filter_by(access_token=token).first()
+    if not court:
+        return render_template('404.html'), 404
+
+    club = db.session.get(Club, court.club_id)
+    if not club or not club.can_access():
+        return render_template('inactive.html', club=club)
+
+    return render_template('scoring.html', court=court, club=club)
 
 
 # ============================================================
