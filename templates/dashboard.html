@@ -25,17 +25,8 @@
             border: 1px solid rgba(255,255,255,0.1);
             border-radius: 15px;
         }
-
-        .header h1 {
-            color: #00d4ff;
-            font-size: 22px;
-        }
-
-        .header p {
-            color: rgba(255,255,255,0.6);
-            font-size: 13px;
-            margin-top: 3px;
-        }
+        .header h1 { color: #00d4ff; font-size: 22px; }
+        .header p  { color: rgba(255,255,255,0.6); font-size: 13px; margin-top: 3px; }
 
         .logout-btn {
             background: rgba(255,50,50,0.2);
@@ -47,13 +38,12 @@
             font-size: 13px;
             transition: background 0.3s;
         }
+        .logout-btn:hover { background: rgba(255,50,50,0.35); }
 
-        .logout-btn:hover {
-            background: rgba(255,50,50,0.35);
-        }
-
+        /* ── Trial / Expired banners ── */
         .trial-banner {
-            background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(0,153,204,0.1));
+            background: linear-gradient(135deg, rgba(0,212,255,0.15),
+                                                rgba(0,153,204,0.1));
             border: 1px solid rgba(0,212,255,0.3);
             border-radius: 12px;
             padding: 15px 20px;
@@ -61,18 +51,23 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
         }
+        .trial-text { color: #00d4ff; font-size: 14px; }
+        .trial-days { font-size: 22px; font-weight: 700; color: #00d4ff; }
 
-        .trial-banner .trial-text {
-            color: #00d4ff;
-            font-size: 14px;
+        .expired-overlay {
+            background: rgba(255,50,50,0.1);
+            border: 1px solid rgba(255,50,50,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 25px;
         }
-
-        .trial-banner .trial-days {
-            font-size: 22px;
-            font-weight: 700;
-            color: #00d4ff;
-        }
+        .expired-overlay h3 { color: #ff6b6b; margin-bottom: 8px; }
+        .expired-overlay p  { color: rgba(255,255,255,0.6); font-size: 13px;
+                              margin-bottom: 15px; }
 
         .subscribe-btn {
             background: linear-gradient(135deg, #00d4ff, #0099cc);
@@ -82,15 +77,19 @@
             text-decoration: none;
             font-size: 13px;
             font-weight: 600;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
         }
+        .subscribe-btn:hover { opacity: 0.9; }
 
+        /* ── Stats ── */
         .stats-row {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
             margin-bottom: 25px;
         }
-
         .stat-card {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
@@ -98,26 +97,33 @@
             padding: 20px;
             text-align: center;
         }
+        .stat-card .number { font-size: 32px; font-weight: 700; color: #00d4ff; }
+        .stat-card .label  { color: rgba(255,255,255,0.5); font-size: 12px; margin-top: 5px; }
 
-        .stat-card .number {
-            font-size: 32px;
-            font-weight: 700;
-            color: #00d4ff;
-        }
-
-        .stat-card .label {
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-            margin-top: 5px;
-        }
-
-        .section-title {
-            color: rgba(255,255,255,0.8);
-            font-size: 16px;
-            font-weight: 600;
+        /* ── Section header ── */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 15px;
         }
+        .section-title { color: rgba(255,255,255,0.8); font-size: 16px; font-weight: 600; }
 
+        /* ── Add Court button ── */
+        .btn-add-court {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            color: #0a0e1a;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-add-court:hover { opacity: 0.85; }
+
+        /* ── Court cards ── */
         .courts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -130,11 +136,9 @@
             border-radius: 15px;
             padding: 20px;
             transition: border-color 0.3s;
+            position: relative;
         }
-
-        .court-card:hover {
-            border-color: rgba(0,212,255,0.4);
-        }
+        .court-card:hover { border-color: rgba(0,212,255,0.4); }
 
         .court-header {
             display: flex;
@@ -142,13 +146,7 @@
             align-items: center;
             margin-bottom: 15px;
         }
-
-        .court-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: white;
-        }
-
+        .court-name   { font-size: 16px; font-weight: 600; color: white; }
         .court-status {
             background: rgba(0,255,100,0.15);
             border: 1px solid rgba(0,255,100,0.3);
@@ -174,7 +172,6 @@
             display: flex;
             gap: 8px;
         }
-
         .btn-open {
             flex: 1;
             padding: 9px;
@@ -188,9 +185,8 @@
             text-decoration: none;
             text-align: center;
         }
-
         .btn-qr {
-            padding: 9px 14px;
+            padding: 9px 12px;
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
@@ -199,199 +195,418 @@
             cursor: pointer;
             text-decoration: none;
             text-align: center;
+            transition: background 0.2s;
         }
+        .btn-qr:hover { background: rgba(255,255,255,0.15); }
 
-        .btn-qr:hover {
-            background: rgba(255,255,255,0.15);
-        }
-
-        .expired-overlay {
-            background: rgba(255,50,50,0.1);
+        .btn-delete {
+            padding: 9px 12px;
+            background: rgba(255,50,50,0.15);
             border: 1px solid rgba(255,50,50,0.3);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 25px;
-        }
-
-        .expired-overlay h3 {
+            border-radius: 8px;
             color: #ff6b6b;
-            margin-bottom: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
         }
+        .btn-delete:hover { background: rgba(255,50,50,0.3); }
 
-        .expired-overlay p {
-            color: rgba(255,255,255,0.6);
-            font-size: 13px;
-            margin-bottom: 15px;
+        /* ── Empty state ── */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 50px 20px;
+            color: rgba(255,255,255,0.3);
         }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 15px; }
 
-        /* QR Modal */
-        .qr-modal {
+        /* ── QR Modal ── */
+        .modal-overlay {
             display: none;
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
+            inset: 0;
             background: rgba(0,0,0,0.8);
             z-index: 1000;
             justify-content: center;
             align-items: center;
         }
+        .modal-overlay.active { display: flex; }
 
-        .qr-modal.active {
-            display: flex;
-        }
-
-        .qr-modal-content {
+        .modal-box {
             background: #1a1a2e;
             border: 1px solid rgba(0,212,255,0.3);
             border-radius: 20px;
             padding: 30px;
             text-align: center;
-            max-width: 320px;
+            max-width: 340px;
             width: 90%;
         }
-
-        .qr-modal-content h3 {
-            color: #00d4ff;
-            margin-bottom: 5px;
-            font-size: 18px;
+        .modal-box h3  { color: #00d4ff; margin-bottom: 5px; font-size: 18px; }
+        .modal-box p   { color: rgba(255,255,255,0.5); font-size: 12px; margin-bottom: 20px; }
+        .modal-box img {
+            width: 200px; height: 200px;
+            border-radius: 10px; background: white; padding: 10px;
         }
-
-        .qr-modal-content p {
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-            margin-bottom: 20px;
-        }
-
-        .qr-modal-content img {
-            width: 200px;
-            height: 200px;
-            border-radius: 10px;
-            background: white;
-            padding: 10px;
-        }
-
         .qr-url {
-            margin-top: 15px;
+            margin-top: 12px;
             font-size: 10px;
             color: rgba(255,255,255,0.4);
             word-break: break-all;
             font-family: monospace;
         }
 
-        .qr-close {
-            margin-top: 20px;
-            padding: 10px 30px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px;
+        /* ── Add Court Modal ── */
+        .modal-input {
+            width: 100%;
+            padding: 12px 14px;
+            margin: 12px 0 18px;
+            background: rgba(255,255,255,0.08);
+            border: 2px solid rgba(0,212,255,0.4);
+            border-radius: 10px;
             color: white;
-            cursor: pointer;
-            font-size: 13px;
+            font-size: 16px;
+            outline: none;
         }
+        .modal-input:focus { border-color: #00d4ff; }
+        .modal-input::placeholder { color: rgba(255,255,255,0.3); }
 
-        .qr-close:hover {
-            background: rgba(255,255,255,0.2);
+        .modal-btn {
+            width: 100%;
+            padding: 13px;
+            margin: 5px 0;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .modal-btn:hover   { opacity: 0.88; }
+        .modal-btn:active  { opacity: 0.75; }
+        .modal-btn-primary { background: linear-gradient(135deg, #00d4ff, #0099cc); color: white; }
+        .modal-btn-danger  { background: linear-gradient(135deg, #ff4444, #cc0000); color: white; }
+        .modal-btn-cancel  { background: rgba(255,255,255,0.08);
+                             border: 1px solid rgba(255,255,255,0.15); color: #aaa; }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(80px);
+            background: #1a2a1a;
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 2000;
+            transition: transform 0.3s ease;
+            white-space: nowrap;
+        }
+        .toast.error  { background: #2a1a1a; border-color: #ff6b6b; color: #ff6b6b; }
+        .toast.show   { transform: translateX(-50%) translateY(0); }
+
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .stat-card:last-child { grid-column: 1 / -1; }
         }
     </style>
 </head>
 <body>
 
-    <!-- Header -->
-    <div class="header">
-        <div>
-            <h1>🎾 {{ club.club_name }}</h1>
-            <p>Welcome back, {{ club.owner_name }}</p>
-        </div>
-        <a href="/logout" class="logout-btn">Logout</a>
+<!-- ── Header ── -->
+<div class="header">
+    <div>
+        <h1>🎾 {{ club.club_name }}</h1>
+        <p>Welcome back, {{ club.owner_name }}</p>
     </div>
+    <a href="/logout" class="logout-btn">Logout</a>
+</div>
 
-    <!-- Trial Banner or Expired Warning -->
-    {% if club.is_trial and club.trial_days_left() > 0 %}
-    <div class="trial-banner">
-        <div>
-            <div class="trial-text">⏱ Free Trial Active</div>
-            <div class="trial-days">{{ club.trial_days_left() }} days left</div>
-        </div>
-        <a href="/subscribe" class="subscribe-btn">Subscribe Now €29/court/month →</a>
+<!-- ── Trial / Expired banner ── -->
+{% if club.is_trial and club.trial_days_left() > 0 %}
+<div class="trial-banner">
+    <div>
+        <div class="trial-text">⏱ Free Trial Active</div>
+        <div class="trial-days">{{ club.trial_days_left() }} days left</div>
     </div>
-    {% elif not club.is_active %}
-    <div class="expired-overlay">
-        <h3>⚠️ Subscription Required</h3>
-        <p>Your trial has ended. Subscribe to keep your courts active.</p>
-        <a href="/subscribe" class="subscribe-btn">Activate Subscription →</a>
-    </div>
-    {% endif %}
+    <a href="/subscribe" class="subscribe-btn">Subscribe Now €29/court/month →</a>
+</div>
+{% elif not club.is_active %}
+<div class="expired-overlay">
+    <h3>⚠️ Subscription Required</h3>
+    <p>Your trial has ended. Subscribe to keep your courts active.</p>
+    <a href="/subscribe" class="subscribe-btn">Activate Subscription →</a>
+</div>
+{% endif %}
 
-    <!-- Stats -->
-    <div class="stats-row">
-        <div class="stat-card">
-            <div class="number">{{ courts|length }}</div>
-            <div class="label">Total Courts</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">€{{ courts|length * 29 }}</div>
-            <div class="label">Monthly Cost</div>
-        </div>
-        <div class="stat-card">
-            <div class="number">{{ club.trial_days_left() if club.is_trial else '∞' }}</div>
-            <div class="label">Days Remaining</div>
-        </div>
+<!-- ── Stats ── -->
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="number" id="courtCount">{{ courts|length }}</div>
+        <div class="label">Total Courts</div>
     </div>
+    <div class="stat-card">
+        <div class="number" id="monthlyCost">€{{ courts|length * 29 }}</div>
+        <div class="label">Monthly Cost</div>
+    </div>
+    <div class="stat-card">
+        <div class="number">
+            {{ club.trial_days_left() if club.is_trial else '∞' }}
+        </div>
+        <div class="label">Days Remaining</div>
+    </div>
+</div>
 
-    <!-- Courts -->
+<!-- ── Courts section ── -->
+<div class="section-header">
     <div class="section-title">🏟️ Your Courts</div>
-    <div class="courts-grid">
-        {% for court in courts %}
-        <div class="court-card">
+    <button class="btn-add-court" onclick="showAddCourtModal()">+ Add Court</button>
+</div>
+
+<div class="courts-grid" id="courtsGrid">
+    {% for court in courts %}
+    <div class="court-card" id="card-{{ court.access_token }}">
+        <div class="court-header">
+            <div class="court-name">{{ court.court_name }}</div>
+            <div class="court-status">● Active</div>
+        </div>
+        <div class="court-url">
+            {{ request.host_url }}court/{{ court.access_token }}
+        </div>
+        <div class="court-actions">
+            <a href="/court/{{ court.access_token }}"
+               class="btn-open" target="_blank">Open Scoreboard</a>
+            <button onclick="showQR('{{ court.access_token }}', '{{ court.court_name }}')"
+                    class="btn-qr">📱 QR</button>
+            <button onclick="confirmDelete('{{ court.access_token }}', '{{ court.court_name }}')"
+                    class="btn-delete">🗑</button>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state" id="emptyState">
+        <div class="empty-icon">🏟️</div>
+        <p>No courts yet. Add your first court above!</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ══════════════════════════════════════
+     QR MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="qrModal">
+    <div class="modal-box">
+        <h3 id="qrCourtName">QR Code</h3>
+        <p>Scan to open scoreboard on any device</p>
+        <img id="qrImage" src="" alt="QR Code">
+        <div class="qr-url" id="qrUrl"></div>
+        <br>
+        <button class="modal-btn modal-btn-cancel" style="margin-top:16px"
+                onclick="closeModal('qrModal')">Close</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     ADD COURT MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="addCourtModal">
+    <div class="modal-box">
+        <h3>➕ Add New Court</h3>
+        <p>Give this court a name (e.g. "Court 1" or "Centre Court")</p>
+        <input class="modal-input" id="newCourtName"
+               type="text" maxlength="50"
+               placeholder="Court name…"
+               onkeydown="if(event.key==='Enter') submitAddCourt()">
+        <button class="modal-btn modal-btn-primary" onclick="submitAddCourt()">Add Court</button>
+        <button class="modal-btn modal-btn-cancel"  onclick="closeModal('addCourtModal')">Cancel</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DELETE CONFIRM MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+        <h3 style="color:#ff6b6b">🗑️ Delete Court?</h3>
+        <p id="deleteCourtLabel" style="margin-bottom:20px; font-size:14px;">
+            This will permanently remove the court and all its data.
+        </p>
+        <button class="modal-btn modal-btn-danger"  onclick="submitDelete()">Yes, Delete</button>
+        <button class="modal-btn modal-btn-cancel"  onclick="closeModal('deleteModal')">Cancel</button>
+    </div>
+</div>
+
+<!-- ── Toast ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+    const BASE = '{{ request.host_url }}'.replace(/\/$/, '');
+    let _deleteToken = null;
+
+    /* ── Modal helpers ── */
+    function showModal(id) {
+        document.getElementById(id).classList.add('active');
+    }
+    function closeModal(id) {
+        document.getElementById(id).classList.remove('active');
+    }
+    // Close on backdrop click
+    document.querySelectorAll('.modal-overlay').forEach(el => {
+        el.addEventListener('click', e => {
+            if (e.target === el) closeModal(el.id);
+        });
+    });
+
+    /* ── Toast ── */
+    function toast(msg, type = 'ok') {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className   = 'toast' + (type === 'error' ? ' error' : '');
+        // Force reflow
+        void el.offsetWidth;
+        el.classList.add('show');
+        setTimeout(() => el.classList.remove('show'), 3000);
+    }
+
+    /* ── QR ── */
+    function showQR(token, courtName) {
+        document.getElementById('qrCourtName').textContent = courtName + ' — QR Code';
+        document.getElementById('qrImage').src = '/qr/' + token;
+        const url = BASE + '/court/' + token;
+        document.getElementById('qrUrl').textContent = url;
+        showModal('qrModal');
+    }
+
+    /* ── Add Court ── */
+    function showAddCourtModal() {
+        document.getElementById('newCourtName').value = '';
+        showModal('addCourtModal');
+        setTimeout(() => document.getElementById('newCourtName').focus(), 150);
+    }
+
+    async function submitAddCourt() {
+        const name = document.getElementById('newCourtName').value.trim();
+        if (!name) { toast('Please enter a court name.', 'error'); return; }
+
+        closeModal('addCourtModal');
+
+        try {
+            const res  = await fetch('/api/court/add', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ name })
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                toast(data.error || 'Failed to add court.', 'error');
+                return;
+            }
+
+            // Inject new card into DOM
+            injectCourtCard(data.token, data.name);
+            updateStats(+1);
+            toast('✅ Court "' + data.name + '" added!');
+        } catch(e) {
+            toast('Network error. Please try again.', 'error');
+        }
+    }
+
+    function injectCourtCard(token, name) {
+        // Remove empty state if present
+        const empty = document.getElementById('emptyState');
+        if (empty) empty.remove();
+
+        const url  = BASE + '/court/' + token;
+        const card = document.createElement('div');
+        card.className = 'court-card';
+        card.id        = 'card-' + token;
+        card.innerHTML = `
             <div class="court-header">
-                <div class="court-name">{{ court.court_name }}</div>
+                <div class="court-name">${escHtml(name)}</div>
                 <div class="court-status">● Active</div>
             </div>
-
-            <!-- ✅ FIXED: Using access_token instead of id -->
-            <div class="court-url">
-                https://web-production-c823c.up.railway.app/court/{{ court.access_token }}
-            </div>
-
+            <div class="court-url">${escHtml(url)}</div>
             <div class="court-actions">
-                <!-- ✅ FIXED: Using access_token -->
-                <a href="/court/{{ court.access_token }}" class="btn-open" target="_blank">Open Scoreboard</a>
-                <button onclick="showQR('{{ court.access_token }}', '{{ court.court_name }}')" class="btn-qr">📱 QR</button>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
+                <a href="/court/${token}" class="btn-open" target="_blank">Open Scoreboard</a>
+                <button onclick="showQR('${token}', '${escHtml(name)}')"
+                        class="btn-qr">📱 QR</button>
+                <button onclick="confirmDelete('${token}', '${escHtml(name)}')"
+                        class="btn-delete">🗑</button>
+            </div>`;
+        document.getElementById('courtsGrid').appendChild(card);
+    }
 
-    <!-- QR Modal -->
-    <div class="qr-modal" id="qrModal">
-        <div class="qr-modal-content">
-            <h3 id="qrCourtName">Court QR Code</h3>
-            <p>Scan to open scoreboard</p>
-            <img id="qrImage" src="" alt="QR Code">
-            <div class="qr-url" id="qrUrl"></div>
-            <button class="qr-close" onclick="closeQR()">Close</button>
-        </div>
-    </div>
+    /* ── Delete Court ── */
+    function confirmDelete(token, name) {
+        _deleteToken = token;
+        document.getElementById('deleteCourtLabel').textContent =
+            `Delete "${name}"? This will permanently remove the court and all match data.`;
+        showModal('deleteModal');
+    }
 
-    <script>
-        function showQR(token, courtName) {
-            document.getElementById('qrCourtName').textContent = courtName + ' - QR Code';
-            document.getElementById('qrImage').src = '/qr/' + token;
-            document.getElementById('qrUrl').textContent = 
-                'https://web-production-c823c.up.railway.app/court/' + token;
-            document.getElementById('qrModal').classList.add('active');
+    async function submitDelete() {
+        if (!_deleteToken) return;
+        const token = _deleteToken;
+        closeModal('deleteModal');
+
+        try {
+            const res  = await fetch(`/api/court/${token}/delete`, { method: 'POST' });
+            const data = await res.json();
+
+            if (!data.success) {
+                toast(data.error || 'Failed to delete court.', 'error');
+                return;
+            }
+
+            const card = document.getElementById('card-' + token);
+            if (card) {
+                card.style.transition = 'opacity 0.3s, transform 0.3s';
+                card.style.opacity    = '0';
+                card.style.transform  = 'scale(0.9)';
+                setTimeout(() => {
+                    card.remove();
+                    updateStats(-1);
+                    // Show empty state if no courts left
+                    if (!document.querySelector('.court-card')) {
+                        const grid = document.getElementById('courtsGrid');
+                        grid.innerHTML =
+                            `<div class="empty-state" id="emptyState">
+                                <div class="empty-icon">🏟️</div>
+                                <p>No courts yet. Add your first court above!</p>
+                             </div>`;
+                    }
+                }, 300);
+            }
+            toast('🗑️ Court deleted.');
+        } catch(e) {
+            toast('Network error. Please try again.', 'error');
         }
+        _deleteToken = null;
+    }
 
-        function closeQR() {
-            document.getElementById('qrModal').classList.remove('active');
-        }
+    /* ── Stats update ── */
+    function updateStats(delta) {
+        const el   = document.getElementById('courtCount');
+        const cost = document.getElementById('monthlyCost');
+        if (!el) return;
+        const n = (parseInt(el.textContent) || 0) + delta;
+        el.textContent   = n;
+        cost.textContent = '€' + (n * 29);
+    }
 
-        // Close modal on background click
-        document.getElementById('qrModal').addEventListener('click', function(e) {
-            if (e.target === this) closeQR();
-        });
-    </script>
-
+    /* ── XSS guard ── */
+    function escHtml(str) {
+        return String(str)
+            .replace(/&/g,'&amp;')
+            .replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;')
+            .replace(/"/g,'&quot;')
+            .replace(/'/g,'&#39;');
+    }
+</script>
 </body>
 </html>
