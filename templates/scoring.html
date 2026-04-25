@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>{{ court.court_name }} – Scoring</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%; width: 100%;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #111;
+    touch-action: manipulation;
+  }
+
+  /* ── Sound overlay ── */
+  #soundOverlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.85);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 16px;
+    color: #fff;
+  }
+  #soundOverlay h2 { font-size: 1.4rem; text-align: center; padding: 0 20px; }
+  #soundOverlay button {
+    padding: 16px 40px; font-size: 1.1rem; font-weight: 700;
+    border: none; border-radius: 12px;
+    background: #4CAF50; color: #fff; cursor: pointer;
+  }
+  #soundOverlay .skip {
+    background: transparent; border: 1px solid #888;
+    font-size: .9rem; font-weight: 400; padding: 10px 24px;
+  }
+
+  /* ── Setup overlay ── */
+  #setupOverlay {
+    position: fixed; inset: 0; z-index: 9998;
+    background: #1a1a2e;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    overflow-y: auto; padding: 20px;
+  }
+  #setupOverlay h1 { color: #fff; font-size: 1.5rem; margin-bottom: 24px; text-align: center; }
+  .setup-form { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 14px; }
+  .setup-form label { color: #ccc; font-size: .85rem; margin-bottom: 4px; display: block; }
+  .setup-form input, .setup-form select {
+    width: 100%; padding: 12px 14px; font-size: 1rem;
+    border-radius: 8px; border: 1px solid #444;
+    background: #2a2a3e; color: #fff; outline: none;
+  }
+  .setup-form input:focus, .setup-form select:focus { border-color: #4a9eff; }
+  .team-box { border: 1px solid #333; border-radius: 10px; padding: 14px; }
+  .team-box.blue { border-color: #1565C0; }
+  .team-box.red  { border-color: #C62828; }
+  .team-label { font-weight: 700; font-size: .95rem; margin-bottom: 10px; }
+  .team-label.blue { color: #42A5F5; }
+  .team-label.red  { color: #EF5350; }
+  #startBtn {
+    margin-top: 8px; padding: 16px; font-size: 1.1rem; font-weight: 700;
+    border: none; border-radius: 10px; background: #4CAF50;
+    color: #fff; cursor: pointer; width: 100%;
+  }
+  .server-select { display: flex; flex-direction: column; gap: 6px; }
+  .server-select label { color: #ccc; font-size: .85rem; }
+
+  /* ── Scoreboard ── */
+  #scoreArea {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 28%;
+    background: #1a1a1a;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 10; padding: 8px;
+  }
+
+  .score-header {
+    display: flex; width: 100%; align-items: center;
+    justify-content: space-between; padding: 0 8px; margin-bottom: 4px;
+  }
+  .team-names-row {
+    display: flex; width: 100%;
+    justify-content: space-around; align-items: center;
+  }
+  .team-name-display {
+    font-size: clamp(.65rem, 2.5vw, .85rem);
+    color: #aaa; text-align: center; flex: 1; padding: 0 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .team-name-display.blue { color: #64B5F6; }
+  .team-name-display.red  { color: #EF9A9A; }
+
+  .sets-row {
+    display: flex; width: 100%;
+    justify-content: space-around; align-items: center;
+    margin: 2px 0;
+  }
+  .set-score {
+    font-size: clamp(1rem, 4vw, 1.4rem);
+    font-weight: 700; color: #fff; text-align: center; flex: 1;
+  }
+  .set-score.dim { color: #555; }
+  .set-divider { color: #444; font-size: .8rem; }
+
+  .points-row {
+    display: flex; width: 100%;
+    justify-content: space-around; align-items: center;
+  }
+  .point-display {
+    font-size: clamp(2rem, 10vw, 3.5rem);
+    font-weight: 900; text-align: center; flex: 1;
+    line-height: 1;
+  }
+  .point-display.blue { color: #42A5F5; }
+  .point-display.red  { color: #EF5350; }
+
+  .status-text {
+    font-size: clamp(.7rem, 2.5vw, .9rem);
+    color: #FFD700; text-align: center; min-height: 1.1em;
+    font-weight: 600;
+  }
+
+  .server-indicator {
+    font-size: .7rem; color: #aaa; text-align: center;
+    margin-top: 2px; min-height: 1em;
+  }
+
+  /* ── Tap zones ── */
+  #tapArea {
+    position: fixed;
+    top: 28%; left: 0; right: 0; bottom: 60px;
+    display: flex;
+  }
+  .tap-zone {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; user-select: none; transition: background .1s;
+    position: relative;
+  }
+  .tap-zone:active { filter: brightness(1.3); }
+  .tap-zone.blue { background: #0D47A1; }
+  .tap-zone.red  { background: #B71C1C; }
+  .tap-label {
+    font-size: clamp(1.2rem, 5vw, 2rem);
+    color: rgba(255,255,255,.25); font-weight: 700;
+    text-align: center; pointer-events: none;
+    padding: 10px;
+  }
+  .tap-flash {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,.15);
+    opacity: 0; pointer-events: none;
+    animation: flash .3s ease-out;
+  }
+  @keyframes flash { 0%{opacity:1} 100%{opacity:0} }
+
+  /* ── Bottom controls ── */
+  #controls {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 60px;
+    background: #222; display: flex; align-items: center;
+    justify-content: space-around; padding: 0 10px;
+    border-top: 1px solid #333;
+  }
+  #controls button {
+    padding: 8px 16px; border: none; border-radius: 8px;
+    font-size: .85rem; font-weight: 600; cursor: pointer;
+    color: #fff;
+  }
+  #undoBtn  { background: #555; }
+  #undoBtn:disabled { opacity: .35; }
+  #newGameBtn { background: #1565C0; display: none; }
+  #scoreboardLink { background: #37474F; text-decoration: none; color: #fff;
+    padding: 8px 16px; border-radius: 8px; font-size: .85rem; font-weight: 600; }
+
+  /* ── Match over banner ── */
+  #matchBanner {
+    position: fixed; inset: 0; z-index: 500;
+    background: rgba(0,0,0,.88);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center; gap: 14px;
+    color: #fff; text-align: center; padding: 20px;
+  }
+  #matchBanner h1 { font-size: clamp(1.8rem, 8vw, 3rem); color: #FFD700; }
+  #matchBanner p  { font-size: 1rem; color: #ccc; }
+  #matchBanner button {
+    padding: 14px 32px; font-size: 1rem; font-weight: 700;
+    border: none; border-radius: 10px; background: #4CAF50;
+    color: #fff; cursor: pointer; margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Sound activation overlay -->
+<div id="soundOverlay">
+  <h2>🎾 {{ court.court_name }}</h2>
+  <h2>Tap to activate score announcements</h2>
+  <button onclick="activateSound()">🔊 Enable Sound</button>
+  <button class="skip" onclick="skipSound()">Continue without sound</button>
+</div>
+
+<!-- Setup overlay -->
+<div id="setupOverlay" style="display:none;">
+  <h1>🎾 New Match</h1>
+  <div class="setup-form">
+    <div class="team-box blue">
+      <div class="team-label blue">🔵 Blue Team</div>
+      <label>Player 1</label>
+      <input id="p1" type="text" placeholder="Player name" autocomplete="off">
+      <label style="margin-top:8px;">Player 2 (optional)</label>
+      <input id="p2" type="text" placeholder="Player name" autocomplete="off">
+    </div>
+    <div class="team-box red">
+      <div class="team-label red">🔴 Red Team</div>
+      <label>Player 1</label>
+      <input id="p3" type="text" placeholder="Player name" autocomplete="off">
+      <label style="margin-top:8px;">Player 2 (optional)</label>
+      <input id="p4" type="text" placeholder="Player name" autocomplete="off">
+    </div>
+    <div class="server-select">
+      <label>First server</label>
+      <select id="firstServer">
+        <option value="0">Blue Team serves first</option>
+        <option value="1">Red Team serves first</option>
+      </select>
+    </div>
+    <button id="startBtn" onclick="startMatch()">Start Match ▶</button>
+  </div>
+</div>
+
+<!-- Score display -->
+<div id="scoreArea">
+  <div class="team-names-row">
+    <div class="team-name-display blue" id="blueNames">Blue Team</div>
+    <div style="color:#555;font-size:.8rem;">vs</div>
+    <div class="team-name-display red"  id="redNames">Red Team</div>
+  </div>
+  <div class="sets-row" id="setsRow">
+    <div class="set-score" id="setsBlue">0</div>
+    <div class="set-divider">SETS</div>
+    <div class="set-score" id="setsRed">0</div>
+  </div>
+  <div class="sets-row" id="gamesRow">
+    <div class="set-score" id="gamesBlue">0</div>
+    <div class="set-divider">GAMES</div>
+    <div class="set-score" id="gamesRed">0</div>
+  </div>
+  <div class="points-row">
+    <div class="point-display blue" id="pointsBlue">0</div>
+    <div style="color:#444;font-size:1.5rem;font-weight:300;">–</div>
+    <div class="point-display red"  id="pointsRed">0</div>
+  </div>
+  <div class="status-text" id="statusText"></div>
+  <div class="server-indicator" id="serverIndicator"></div>
+</div>
+
+<!-- Tap zones -->
+<div id="tapArea">
+  <div class="tap-zone blue" id="blueZone" onclick="scorePoint(0)">
+    <div class="tap-label">TAP<br>TO<br>SCORE</div>
+  </div>
+  <div class="tap-zone red"  id="redZone"  onclick="scorePoint(1)">
+    <div class="tap-label">TAP<br>TO<br>SCORE</div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div id="controls">
+  <button id="undoBtn" onclick="undoPoint()" disabled>↩ Undo</button>
+  <a id="scoreboardLink" href="/court/{{ court.access_token }}" target="_blank">📺 Scoreboard</a>
+  <button id="newGameBtn" onclick="newMatch()">＋ New Match</button>
+</div>
+
+<!-- Match over banner -->
+<div id="matchBanner">
+  <h1 id="bannerTitle">🏆 Match Over</h1>
+  <p id="bannerSub"></p>
+  <button onclick="newMatch()">＋ New Match</button>
+</div>
+
+<script>
+const TOKEN = '{{ court.access_token }}';
+const API   = '/api/court/' + TOKEN + '/state';
+
+// ── TTS ──
+let ttsEnabled = false;
+let synth = window.speechSynthesis;
+
+function activateSound() {
+  ttsEnabled = true;
+  document.getElementById('soundOverlay').style.display = 'none';
+  document.getElementById('setupOverlay').style.display = 'flex';
+  // warm up TTS
+  const u = new SpeechSynthesisUtterance('');
+  synth.speak(u);
+  tryWakeLock();
+}
+function skipSound() {
+  ttsEnabled = false;
+  document.getElementById('soundOverlay').style.display = 'none';
+  document.getElementById('setupOverlay').style.display = 'flex';
+  tryWakeLock();
+}
+
+function speak(text, priority) {
+  if (!ttsEnabled) return;
+  if (priority) synth.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1; u.pitch = 1; u.volume = 1;
+  synth.speak(u);
+}
+
+// ── WakeLock ──
+async function tryWakeLock() {
+  try {
+    if ('wakeLock' in navigator) await navigator.wakeLock.request('screen');
+  } catch(e) {}
+}
+
+// ── Game State ──
+const POINTS_STR = ['0','15','30','40'];
+
+let state = null;
+let history = [];   // undo stack (max 50)
+
+function blankState(names, firstServer) {
+  return {
+    names,           // [p1,p2,p3,p4]
+    firstServer,     // 0=blue,1=red
+    server: firstServer,
+    sets: [0,0],
+    setHistory: [],  // [{blue,red}]
+    games: [0,0],
+    points: [0,0],   // 0-3 index, 4=adv
+    inTiebreak: false,
+    deuceCount: 0,
+    goldenPoint: false,
+    matchOver: false,
+    winner: null,    // 0 or 1
+    // tiebreak serve tracking
+    tbPoints: 0,     // total points played in tiebreak
+  };
+}
+
+// ── Start match ──
+function startMatch() {
+  const names = [
+    document.getElementById('p1').value.trim() || 'Blue 1',
+    document.getElementById('p2').value.trim() || '',
+    document.getElementById('p3').value.trim() || 'Red 1',
+    document.getElementById('p4').value.trim() || '',
+  ];
+  const firstServer = parseInt(document.getElementById('firstServer').value);
+  state   = blankState(names, firstServer);
+  history = [];
+  document.getElementById('setupOverlay').style.display = 'none';
+  updateUI();
+  saveState();
+}
+
+// ── Names helpers ──
+function teamName(t) {
+  if (t === 0) {
+    return [state.names[0], state.names[1]].filter(Boolean).join(' / ') || 'Blue';
+  } else {
+    return [state.names[2], state.names[3]].filter(Boolean).join(' / ') || 'Red';
+  }
+}
+function serverName() {
+  const s = state.server;
+  const primary = s === 0 ? state.names[0] : state.names[2];
+  return primary || (s === 0 ? 'Blue' : 'Red');
+}
+
+// ── Score a point ──
+function scorePoint(team) {
+  if (!state || state.matchOver) return;
+
+  // push to undo history
+  history.push(JSON.parse(JSON.stringify(state)));
+  if (history.length > 50) history.shift();
+  document.getElementById('undoBtn').disabled = false;
+
+  // flash
+  flashZone(team);
+
+  if (state.inTiebreak) {
+    scoreTiebreak(team);
+  } else {
+    scoreNormal(team);
+  }
+
+  updateUI();
+  saveState();
+}
+
+function scoreNormal(team) {
+  const opp = 1 - team;
+
+  if (state.goldenPoint) {
+    // golden point: whoever wins takes the game
+    wonGame(team);
+    return;
+  }
+
+  const p  = state.points[team];
+  const op = state.points[opp];
+
+  if (p === 3 && op === 3) {
+    // already at deuce (should be goldenPoint if 2nd deuce — handled below)
+    // this shouldn't normally be hit
+    state.points[team] = 4; // adv
+    speak('Advantage ' + teamName(team));
+    return;
+  }
+
+  if (p === 4) {
+    // had advantage → wins game
+    wonGame(team);
+    return;
+  }
+
+  if (p === 3 && op >= 3) {
+    // reaching deuce from adv
+    if (op === 4) {
+      // opp had adv, now deuce again
+      state.points[opp] = 3;
+      state.deuceCount++;
+      if (state.deuceCount >= 2) {
+        state.goldenPoint = true;
+        state.points[team] = 3;
+        speak('Golden Point');
+      } else {
+        speak('Deuce');
+      }
+      return;
+    }
+  }
+
+  // normal point progression
+  if (p < 3) {
+    state.points[team]++;
+    // check for deuce
+    if (state.points[team] === 3 && state.points[opp] === 3) {
+      state.deuceCount++;
+      if (state.deuceCount >= 2) {
+        state.goldenPoint = true;
+        speak('Golden Point');
+      } else {
+        speak('Deuce');
+      }
+    } else {
+      announcePoints();
+    }
+    return;
+  }
+
+  if (p === 3 && op < 3) {
+    wonGame(team);
+    return;
+  }
+
+  // p===3, op===3 → deuce
+  state.deuceCount++;
+  if (state.deuceCount >= 2) {
+    state.goldenPoint = true;
+    speak('Golden Point');
+  } else {
+    speak('Deuce');
+  }
+}
+
+function scoreTiebreak(team) {
+  state.points[team]++;
+  state.tbPoints++;
+
+  // tiebreak serve rotation: swap after 1st point, then every 2
+  if (state.tbPoints === 1) {
+    state.server = 1 - state.server;
+  } else if ((state.tbPoints - 1) % 2 === 0) {
+    state.server = 1 - state.server;
+  }
+
+  const b = state.points[0], r = state.points[1];
+  const diff = Math.abs(b - r);
+
+  if ((b >= 7 || r >= 7) && diff >= 2) {
+    const winner = b > r ? 0 : 1;
+    wonSet(winner, true);
+  } else {
+    speak(state.points[0] + ' ' + state.points[1]);
+  }
+}
+
+// ── Won a game ──
+function wonGame(team) {
+  state.points = [0, 0];
+  state.deuceCount = 0;
+  state.goldenPoint = false;
+  state.games[team]++;
+
+  const b = state.games[0], r = state.games[1];
+
+  // check tiebreak trigger
+  if (b === 6 && r === 6) {
+    state.inTiebreak = true;
+    state.tbPoints = 0;
+    speak('Tiebreak');
+    rotateServeNewGame();
+    return;
+  }
+
+  // check set win: 6+ games, 2 ahead
+  if ((b >= 6 || r >= 6) && Math.abs(b - r) >= 2) {
+    wonSet(team, false);
+    return;
+  }
+
+  // check 7-5
+  if ((b === 7 && r === 5) || (b === 5 && r === 7)) {
+    wonSet(team, false);
+    return;
+  }
+
+  speak('Game ' + teamName(team) + '. ' + b + ' ' + r);
+  rotateServeNewGame();
+}
+
+// ── Won a set ──
+function wonSet(team, wasTiebreak) {
+  state.setHistory.push({ blue: state.games[0], red: state.games[1] });
+  state.sets[team]++;
+  state.games = [0, 0];
+  state.points = [0, 0];
+  state.deuceCount = 0;
+  state.goldenPoint = false;
+  state.inTiebreak = false;
+  state.tbPoints = 0;
+
+  speak('Set ' + teamName(team));
+
+  // best of 3: first to 2 sets wins
+  if (state.sets[team] >= 2) {
+    state.matchOver = true;
+    state.winner = team;
+    setTimeout(() => speak('Match ' + teamName(team), true), 800);
+    showMatchBanner(team);
+    return;
+  }
+
+  rotateServeNewSet();
+}
+
+// ── Serve rotation ──
+function rotateServeNewGame() {
+  state.server = 1 - state.server;
+  setTimeout(() => speak(serverName() + ' to serve'), 600);
+}
+function rotateServeNewSet() {
+  // server after set: continues from where it was (standard rules)
+  state.server = 1 - state.server;
+  setTimeout(() => speak(serverName() + ' to serve'), 1200);
+}
+
+// ── Undo ──
+function undoPoint() {
+  if (!history.length) return;
+  state = history.pop();
+  document.getElementById('undoBtn').disabled = history.length === 0;
+  document.getElementById('matchBanner').style.display = 'none';
+  updateUI();
+  saveState();
+}
+
+// ── New match ──
+function newMatch() {
+  document.getElementById('matchBanner').style.display = 'none';
+  document.getElementById('setupOverlay').style.display = 'flex';
+  state = null;
+}
+
+// ── Announce points ──
+function announcePoints() {
+  if (!ttsEnabled || !state) return;
+  const ps = ['0','15','30','40'];
+  const b  = state.points[0], r = state.points[1];
+  if (!state.inTiebreak) {
+    speak((ps[b]||b) + ' ' + (ps[r]||r));
+  }
+}
+
+// ── Flash zone ──
+function flashZone(team) {
+  const zone = team === 0 ? document.getElementById('blueZone')
+                          : document.getElementById('redZone');
+  const el = document.createElement('div');
+  el.className = 'tap-flash';
+  zone.appendChild(el);
+  setTimeout(() => el.remove(), 400);
+}
+
+// ── Show match banner ──
+function showMatchBanner(winner) {
+  document.getElementById('bannerTitle').textContent =
+    '🏆 ' + teamName(winner) + ' Wins!';
+  document.getElementById('bannerSub').textContent =
+    state.sets[0] + ' – ' + state.sets[1] + ' sets';
+  const b = document.getElementById('matchBanner');
+  b.style.display = 'flex';
+  document.getElementById('newGameBtn').style.display = 'inline-block';
+}
+
+// ── Update UI ──
+function updateUI() {
+  if (!state) return;
+
+  // Names
+  document.getElementById('blueNames').textContent = teamName(0);
+  document.getElementById('redNames').textContent  = teamName(1);
+
+  // Sets
+  document.getElementById('setsBlue').textContent = state.sets[0];
+  document.getElementById('setsRed').textContent  = state.sets[1];
+
+  // Games
+  document.getElementById('gamesBlue').textContent = state.games[0];
+  document.getElementById('gamesRed').textContent  = state.games[1];
+
+  // Points
+  let pb, pr;
+  if (state.inTiebreak) {
+    pb = state.points[0];
+    pr = state.points[1];
+  } else {
+    const pts = ['0','15','30','40','AD'];
+    pb = pts[state.points[0]] || state.points[0];
+    pr = pts[state.points[1]] || state.points[1];
+    // if one has AD show it clearly
+    if (state.points[0] === 4) { pb = 'AD'; pr = '40'; }
+    if (state.points[1] === 4) { pr = 'AD'; pb = '40'; }
+  }
+  document.getElementById('pointsBlue').textContent = pb;
+  document.getElementById('pointsRed').textContent  = pr;
+
+  // Status
+  let status = '';
+  if (state.goldenPoint) status = '⚡ Golden Point';
+  else if (state.deuceCount > 0 && state.points[0] === 3 && state.points[1] === 3) status = 'Deuce';
+  else if (state.inTiebreak) status = '🎾 Tiebreak';
+  document.getElementById('statusText').textContent = status;
+
+  // Server
+  if (!state.matchOver) {
+    document.getElementById('serverIndicator').textContent =
+      '🎾 Serving: ' + serverName();
+  } else {
+    document.getElementById('serverIndicator').textContent = '';
+  }
+
+  // Undo button
+  document.getElementById('undoBtn').disabled = history.length === 0;
+}
+
+// ── Save state to server ──
+let saveTimer = null;
+function saveState() {
+  if (!state) return;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    fetch(API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(state)
+    }).catch(() => {});
+  }, 300);
+}
+
+// ── On load: check for existing state ──
+(async function init() {
+  try {
+    const res  = await fetch(API);
+    const data = await res.json();
+    if (data && data.names && !data.matchOver) {
+      state   = data;
+      history = [];
+      document.getElementById('soundOverlay').style.display = 'flex';
+      // hide setup, will show scoring directly after sound overlay
+      document.getElementById('setupOverlay').style.display = 'none';
+      // patch activateSound/skipSound to go to scoring
+      window.activateSound = function() {
+        ttsEnabled = true;
+        document.getElementById('soundOverlay').style.display = 'none';
+        updateUI();
+        tryWakeLock();
+      };
+      window.skipSound = function() {
+        ttsEnabled = false;
+        document.getElementById('soundOverlay').style.display = 'none';
+        updateUI();
+        tryWakeLock();
+      };
+      return;
+    }
+  } catch(e) {}
+  // fresh start - overlays already set correctly
+})();
+</script>
+</body>
+</html>
