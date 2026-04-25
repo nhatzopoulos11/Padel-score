@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Score - {{ court.court_name }}</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #111;
+    font-family: 'Arial Black', Arial, sans-serif;
+  }
+
+  #wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* ── TOP ROW: Player Names ── */
+  #names-row {
+    display: flex;
+    width: 100%;
+    flex: 0 0 18vh;
+  }
+
+  .name-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  #name-box-blue {
+    background: #1565C0;
+  }
+
+  #name-box-red {
+    background: #C62828;
+  }
+
+  .player-name {
+    font-size: 5.5vw;
+    font-weight: 900;
+    color: #ffffff;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+    width: 100%;
+  }
+
+  .serving-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #FFD600;
+    display: inline-block;
+    margin-left: 6px;
+    vertical-align: middle;
+    flex-shrink: 0;
+  }
+
+  .name-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* ── MIDDLE ROW: Score Areas ── */
+  #score-row {
+    display: flex;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  .score-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    padding: 12px 8px;
+    gap: 8px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #btn-blue {
+    background: #1E88E5;
+  }
+
+  #btn-blue:active {
+    background: #0D47A1;
+  }
+
+  #btn-red {
+    background: #E53935;
+  }
+
+  #btn-red:active {
+    background: #B71C1C;
+  }
+
+  /* Flash animation on tap */
+  .score-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.25);
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .score-btn.flash::after {
+    opacity: 1;
+  }
+
+  .score-point {
+    font-size: 16vw;
+    font-weight: 900;
+    color: #ffffff;
+    line-height: 1;
+    text-shadow: 2px 2px 8px rgba(0,0,0,0.4);
+  }
+
+  .score-games {
+    font-size: 7vw;
+    font-weight: 700;
+    color: rgba(255,255,255,0.9);
+    line-height: 1;
+  }
+
+  .score-sets {
+    font-size: 5vw;
+    font-weight: 700;
+    color: rgba(255,255,255,0.75);
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .set-badge {
+    background: rgba(255,255,255,0.25);
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 4.5vw;
+  }
+
+  .score-label {
+    font-size: 3.5vw;
+    color: rgba(255,255,255,0.65);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── BOTTOM ROW: Undo ── */
+  #undo-row {
+    flex: 0 0 13vh;
+    width: 100%;
+    background: #F9A825;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border: none;
+    outline: none;
+    touch-action: manipulation;
+  }
+
+  #undo-row:active {
+    background: #F57F17;
+  }
+
+  #undo-row span {
+    font-size: 6vw;
+    font-weight: 900;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* ── GOLDEN POINT overlay indicator ── */
+  #golden-banner {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    background: #FFD600;
+    color: #1a1a1a;
+    text-align: center;
+    font-size: 5vw;
+    font-weight: 900;
+    padding: 10px;
+    z-index: 999;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  /* ── SET WIN modal ── */
+  #set-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #set-modal.show {
+    display: flex;
+  }
+
+  #set-modal-box {
+    background: #fff;
+    border-radius: 20px;
+    padding: 36px 28px;
+    text-align: center;
+    max-width: 85vw;
+  }
+
+  #set-modal-box h2 {
+    font-size: 7vw;
+    font-weight: 900;
+    margin-bottom: 12px;
+  }
+
+  #set-modal-box p {
+    font-size: 5vw;
+    color: #444;
+    margin-bottom: 24px;
+  }
+
+  #set-modal-box button {
+    background: #1E88E5;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 32px;
+    font-size: 5.5vw;
+    font-weight: 900;
+    cursor: pointer;
+    width: 100%;
+  }
+
+</style>
+</head>
+<body>
+
+<div id="golden-banner">⭐ Golden Point ⭐</div>
+
+<div id="wrapper">
+
+  <!-- NAMES ROW -->
+  <div id="names-row">
+    <div class="name-box" id="name-box-blue">
+      <div class="name-line">
+        <div class="player-name" id="name-p1">Player One</div>
+        <span class="serving-dot" id="dot-p1" style="display:none"></span>
+      </div>
+      <div class="name-line">
+        <div class="player-name" id="name-p2">Player Two</div>
+        <span class="serving-dot" id="dot-p2" style="display:none"></span>
+      </div>
+    </div>
+    <div class="name-box" id="name-box-red">
+      <div class="name-line">
+        <div class="player-name" id="name-p3">Player Three</div>
+        <span class="serving-dot" id="dot-p3" style="display:none"></span>
+      </div>
+      <div class="name-line">
+        <div class="player-name" id="name-p4">Player Four</div>
+        <span class="serving-dot" id="dot-p4" style="display:none"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCORE ROW -->
+  <div id="score-row">
+
+    <!-- BLUE TEAM BUTTON -->
+    <button class="score-btn" id="btn-blue" ontouchstart="scorePoint('blue', this)" onclick="scorePoint('blue', this)">
+      <div class="score-point" id="blue-point">0</div>
+      <div class="score-games" id="blue-games">Games: 0</div>
+      <div class="score-sets">
+        <span class="score-label">Sets:</span>
+        <span id="blue-sets-display">—</span>
+      </div>
+    </button>
+
+    <!-- RED TEAM BUTTON -->
+    <button class="score-btn" id="btn-red" ontouchstart="scorePoint('red', this)" onclick="scorePoint('red', this)">
+      <div class="score-point" id="red-point">0</div>
+      <div class="score-games" id="red-games">Games: 0</div>
+      <div class="score-sets">
+        <span class="score-label">Sets:</span>
+        <span id="red-sets-display">—</span>
+      </div>
+    </button>
+
+  </div>
+
+  <!-- UNDO ROW -->
+  <button id="undo-row" ontouchstart="undoPoint()" onclick="undoPoint()">
+    <span>↩ Tap to Undo Last Point</span>
+  </button>
+
+</div>
+
+<!-- SET WIN MODAL -->
+<div id="set-modal">
+  <div id="set-modal-box">
+    <h2 id="set-modal-title">Set Won!</h2>
+    <p id="set-modal-body">Blue team wins the set 6-3</p>
+    <button onclick="dismissSetModal()">Continue →</button>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+const COURT_TOKEN = "{{ court.access_token }}";
+const API_URL = `/api/court/${COURT_TOKEN}/state`;
+
+const POINTS = ['0','15','30','40','AD','GP'];
+const POINT_LABELS = {'0':'0','15':'15','30':'30','40':'40','AD':'AD','GP':'🏆'};
+
+let state = {
+  blue: { point: 0, games: 0, sets: [] },
+  red:  { point: 0, games: 0, sets: [] },
+  deuce_count: 0,
+  golden_point: false,
+  serving: 1,        // 1,2,3,4
+  game_count: 0,
+  players: ['','','',''],
+  history: []
+};
+
+let touchFired = false;
+
+// ─── INIT ─────────────────────────────────────────────────
+async function init() {
+  try {
+    const r = await fetch(API_URL);
+    const data = await r.json();
+    if (data && data.blue) {
+      state = { ...state, ...data };
+    }
+  } catch(e) {}
+  renderAll();
+
+  // WakeLock
+  if ('wakeLock' in navigator) {
+    try { await navigator.wakeLock.request('screen'); } catch(e) {}
+  }
+}
+
+// ─── SCORE POINT ──────────────────────────────────────────
+function scorePoint(team, el) {
+  if (touchFired) { touchFired = false; return; }
+  if (event && event.type === 'touchstart') touchFired = true;
+
+  // Flash effect
+  el.classList.add('flash');
+  setTimeout(() => el.classList.remove('flash'), 200);
+
+  // Save history
+  state.history = state.history || [];
+  state.history.push(JSON.parse(JSON.stringify({
+    blue: state.blue,
+    red: state.red,
+    deuce_count: state.deuce_count,
+    golden_point: state.golden_point,
+    serving: state.serving,
+    game_count: state.game_count
+  })));
+  if (state.history.length > 50) state.history.shift();
+
+  const opp = team === 'blue' ? 'red' : 'blue';
+
+  if (state.golden_point) {
+    // Golden point — one point decides
+    awardGame(team);
+    return;
+  }
+
+  const myP = state[team].point;
+  const opP = state[opp].point;
+
+  // At 40-40 (index 3-3): deuce
+  if (myP === 3 && opP === 3) {
+    // Already at deuce — team scores → advantage
+    state[team].point = 4; // AD
+    renderAll(); saveState(); return;
+  }
+
+  // Advantage situation
+  if (myP === 4) { // I have AD
+    awardGame(team); return;
+  }
+  if (opP === 4) { // Opponent has AD, I score → back to deuce
+    state[team].point = 3;
+    state[opp].point = 3;
+    state.deuce_count++;
+    if (state.deuce_count >= 2) {
+      state.golden_point = true;
+      showGoldenBanner();
+    }
+    renderAll(); saveState(); return;
+  }
+
+  // Normal point progression
+  state[team].point++;
+
+  // Check if team reached 40 and opponent already at 40 → deuce
+  if (state[team].point === 3 && state[opp].point === 3) {
+    // First deuce — just show 40-40
+  }
+
+  // Win at 40 if opponent < 40
+  if (state[team].point === 3 && state[opp].point < 3) {
+    // Just at 40, not won yet
+  }
+
+  // Score beyond 40 with opp < 40 = game
+  if (state[team].point > 3 && state[opp].point < 3) {
+    awardGame(team); return;
+  }
+
+  // If we just hit index 3 (40) and opp is < 3 that's fine, wait
+  // If team hits index 4 without AD logic above catching it
+  if (state[team].point === 4 && state[opp].point < 3) {
+    awardGame(team); return;
+  }
+
+  renderAll();
+  saveState();
+}
+
+// ─── AWARD GAME ───────────────────────────────────────────
+function awardGame(team) {
+  state[team].games++;
+  state.blue.point = 0;
+  state.red.point = 0;
+  state.deuce_count = 0;
+  state.golden_point = false;
+  hideGoldenBanner();
+
+  // Advance server
+  state.game_count++;
+  state.serving = ((state.game_count) % 4) + 1;
+
+  // Check set win
+  checkSetWin(team);
+}
+
+function checkSetWin(team) {
+  const opp = team === 'blue' ? 'red' : 'blue';
+  const myG = state[team].games;
+  const opG = state[opp].games;
+
+  let setWon = false;
+
+  if (myG >= 6 && myG - opG >= 2) setWon = true;
+  if (myG === 7 && opG === 6) setWon = true; // tiebreak
+
+  if (setWon) {
+    state[team].sets.push(myG);
+    state[opp].sets.push(opG);
+    const setScore = `${myG}-${opG}`;
+
+    // Reset games
+    state.blue.games = 0;
+    state.red.games = 0;
+
+    // Check match win
+    const blueS = state.blue.sets.length;
+    const redS  = state.red.sets.length;
+
+    showSetModal(team, setScore, blueS, redS);
+  }
+
+  renderAll();
+  saveState();
+}
+
+// ─── UNDO ─────────────────────────────────────────────────
+function undoPoint() {
+  if (!state.history || state.history.length === 0) return;
+  const prev = state.history.pop();
+  state.blue = prev.blue;
+  state.red  = prev.red;
+  state.deuce_count  = prev.deuce_count;
+  state.golden_point = prev.golden_point;
+  state.serving  = prev.serving;
+  state.game_count = prev.game_count;
+  if (state.golden_point) showGoldenBanner();
+  else hideGoldenBanner();
+  renderAll();
+  saveState();
+}
+
+// ─── RENDER ───────────────────────────────────────────────
+const POINT_MAP = ['0','15','30','40','AD','🏆'];
+
+function renderAll() {
+  // Points
+  document.getElementById('blue-point').textContent = POINT_MAP[state.blue.point] || '0';
+  document.getElementById('red-point').textContent  = POINT_MAP[state.red.point]  || '0';
+
+  // Games
+  document.getElementById('blue-games').textContent = `Games: ${state.blue.games}`;
+  document.getElementById('red-games').textContent  = `Games: ${state.red.games}`;
+
+  // Sets
+  document.getElementById('blue-sets-display').textContent =
+    state.blue.sets.length ? state.blue.sets.join(', ') : '—';
+  document.getElementById('red-sets-display').textContent =
+    state.red.sets.length ? state.red.sets.join(', ') : '—';
+
+  // Player names
+  const p = state.players || ['','','',''];
+  document.getElementById('name-p1').textContent = p[0] || 'Player 1';
+  document.getElementById('name-p2').textContent = p[1] || 'Player 2';
+  document.getElementById('name-p3').textContent = p[2] || 'Player 3';
+  document.getElementById('name-p4').textContent = p[3] || 'Player 4';
+
+  // Serving dots
+  for (let i=1;i<=4;i++) {
+    document.getElementById(`dot-p${i}`).style.display =
+      state.serving === i ? 'inline-block' : 'none';
+  }
+}
+
+// ─── GOLDEN POINT ─────────────────────────────────────────
+function showGoldenBanner() {
+  document.getElementById('golden-banner').style.display = 'block';
+}
+function hideGoldenBanner() {
+  document.getElementById('golden-banner').style.display = 'none';
+}
+
+// ─── SET MODAL ────────────────────────────────────────────
+function showSetModal(team, setScore, blueS, redS) {
+  const name = team === 'blue' ? 'Blue Team' : 'Red Team';
+  document.getElementById('set-modal-title').textContent = `${name} wins the set!`;
+  document.getElementById('set-modal-body').textContent =
+    `Set score: ${setScore} | Sets: Blue ${blueS} – Red ${redS}`;
+  document.getElementById('set-modal').classList.add('show');
+}
+
+function dismissSetModal() {
+  document.getElementById('set-modal').classList.remove('show');
+}
+
+// ─── SAVE STATE ───────────────────────────────────────────
+async function saveState() {
+  try {
+    const payload = { ...state };
+    delete payload.history; // don't send history over wire
+    await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch(e) {}
+}
+
+// ─── START ────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
